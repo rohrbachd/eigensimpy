@@ -10,11 +10,11 @@ class Quantity:
     """
     
     def __init__(self, **kwargs):
-        self._name = kwargs.get('Name', '')
-        self._si_unit = kwargs.get('SiUnit', '')
+        self.name = kwargs.get('name', '')
+        self.si_unit = kwargs.get('si_unit', '')
         
     @property
-    def Label(self):
+    def label(self):
         """
         Returns a string that represents the name of the quantity, along with its SI unit (if any), enclosed in square brackets.
 
@@ -22,13 +22,13 @@ class Quantity:
             str: The label of the quantity.
         """
         
-        label = self._name
-        if self._si_unit != '':
-            label += f' [{self._si_unit}]'
+        label = self.name
+        if self.si_unit != '':
+            label += f' [{self.si_unit}]'
         return label
     
     def __eq__(self, other):
-        return (self._si_unit == other._si_unit) and (self._name == other._name)
+        return (self.si_unit == other.si_unit) and (self.name == other.name)
     
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -36,91 +36,108 @@ class Quantity:
 
 
 class Dimension:
+    
     def __init__(self, **kwargs):
-        self.Delta = kwargs.get('Delta', 1)
-        self.Offset = kwargs.get('Offset', 0)
-        self.Quantity = kwargs.get('Quantity', Quantity())
+        self._delta: np.float64 = kwargs.get('delta', 1.0)
+        self._offset: np.float64 = kwargs.get('offset', 0.0)
+        self.quantity: Quantity = kwargs.get('quantity', Quantity())
+        
+        if not isinstance(self._delta, np.float64):
+            self._delta = np.float64(self._delta)
+
+        if not isinstance(self._offset, np.float64):
+            self._offset = np.float64(self._offset)
+
+    @property
+    def delta(self) -> np.float64:
+        return self._delta
+
+    @delta.setter
+    def delta(self, value):
+        if not isinstance(value, np.float64):
+            value = np.float64(value)
+        self._delta = value
+
+    @property
+    def offset(self) -> np.float64:
+        return self._offset
+
+    @offset.setter
+    def offset(self, value):
+        if not isinstance(value, np.float64):
+            value = np.float64(value)
+        self._offset = value        
         
     @property
-    def SiUnit(self):
-        return self.Quantity.SiUnit
+    def si_unit(self):
+        return self.quantity.si_unit
     
-    @SiUnit.setter
-    def SiUnit(self, value):
-        self.Quantity.SiUnit = value
+    @si_unit.setter
+    def si_unit(self, value):
+        self.quantity.si_unit = value
         
     @property
-    def Name(self):
-        return self.Quantity.Name
+    def name(self):
+        return self.quantity.name
     
-    @Name.setter
-    def Name(self, value):
-        self.Quantity.Name = value
+    @name.setter
+    def name(self, value):
+        self.quantity.name = value
         
     @property
-    def Label(self):
-        return self.Quantity.Label
+    def label(self):
+        return self.quantity.label
     
     def __eq__(self, other):
-        return (self.Delta == other.Delta) and (self.Offset == other.Offset) and (self.Quantity == other.Quantity)
+        return (self.delta == other.delta) and (self.offset == other.offset) and (self.quantity == other.quantity)
     
     def __ne__(self, other):
         return not self.__eq__(other)
     
     def dimVector(self, numElem):
-        basevec = np.arange(numElem)
-        prod = self.Delta * basevec
-        vec = self.Offset + prod
+        basevec = np.arange(numElem).astype(np.float64)
+        prod = self.delta * basevec
+        vec = self.offset + prod
         return vec
     
-    def findDimName(self, dimName):
-        if dimName == ":":
-            return np.ones(len(self), dtype=bool)
-        else:
-            dimensionNames = np.array([d.Name for d in self])
-            return dimensionNames == dimName
+
+class DimensionArray:
+    def __init__(self, dim_array):
+        if not all(isinstance(dim, Dimension) for dim in dim_array):
+            raise ValueError("Input array must contain only Dimension objects")
+        self.dim_array = np.array(dim_array)
         
-    def findDimNameIndex(self, dimName):
-        matchingDims = self.findDimName(dimName)
+    def find_dim_name(self, dimName):        
+        return np.array([d.name == dimName for d in self.dim_array])
+
+    def find_dim_nameIndex(self, dimName):
+        matchingDims = self.find_dim_name(dimName)
         return np.flatnonzero(matchingDims)
     
-    def setDimUnit(self, dim, dimUnit):
-        dimNum = self._determineDimInput(dim)
-        self._mustMatchInputSize(dimNum, dimUnit)
-        for i in dimNum:
-            self[i].Quantity.SiUnit = dimUnit
-    
-    def setDimName(self, dim, name):
-        dimNum = self._determineDimInput(dim)
-        self._mustMatchInputSize(dimNum, name)
-        for i in dimNum:
-            self[i].Quantity.Name = name
-    
-    def setDimDelta(self, dim, delta):
-        dimNum = self._determineDimInput(dim)
-        self._mustMatchInputSize(dimNum, delta)
-        for i in dimNum:
-            self[i].Delta = delta
-    
-    def setDimOffset(self, dim, offset):
-        dimNum = self._determineDimInput(dim)
-        self._mustMatchInputSize(dimNum, offset)
-        for i in dimNum:
-            self[i].Offset = offset
-    
-    def _determineDimInput(self, dimName):
-        if isinstance(dimName, str):
-            dimNum = self.findDimNameIndex(dimName)
-        elif isinstance(dimName, (int, float)):
-            dimNum = [dimName]
-        elif isinstance(dimName, bool):
-            dimNum = np.flatnonzero(dimName)
+    def set_dim_unit(self, dim, dimUnit):
+        if isinstance(dim, int):
+            self.dim_array[dim].quantity.si_unit = dimUnit
         else:
-            raise ValueError('Dimension index must be numeric or a string')
-        return dimNum
+            for d, u in zip(dim, dimUnit):
+                self.dim_array[d].quantity.si_unit = u
     
-    def _mustMatchInputSize(self, index, var):
-        if len(index) == 1 and np.size(var) != 1:
-            raise ValueError('Number of arguments does not match number of found or specified dimensions')
-        elif np.size(var) not in (1, len(index)):
-            raise ValueError('Number of arguments does not match number of found or specified dimensions')
+    def set_dim_name(self, dim, name):
+        if isinstance(dim, int):
+            self.dim_array[dim].quantity.name = name
+        else:
+            for d, n in zip(dim, name):
+                self.dim_array[d].quantity.name = n
+    
+    def set_dim_delta(self, dim, delta):
+        if isinstance(dim, int):
+            self.dim_array[dim].delta = delta
+        else:
+            for d, dd in zip(dim, delta):
+                self.dim_array[d].delta = dd
+    
+    def set_dim_offset(self, dim, offset):
+        if isinstance(dim, int):
+            self.dim_array[dim].offset = offset
+        else:
+            for d, oo in zip(dim, offset):
+                self.dim_array[d].offset = oo
