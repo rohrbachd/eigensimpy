@@ -4,13 +4,32 @@ import matplotlib.pyplot as plt
 class Signal:
     def __init__(self,**kwargs):
         
-        empty_array = np.zeros((0, 0), dtype=int);
-        self._data: np.array = kwargs.get('data', empty_array)
-        self._dims: DimensionArray = kwargs.get('dims', DimensionArray())
-        self._amplitude: Quantity = kwargs.get('amplitude', Quantity())
+        empty_array = np.zeros((0, 0), dtype=int)
         
-        if len(self._dims.dim_array) < self.ndim:
-            raise ValueError("Dimension array must have the same number of elements as the data shape")
+        data = kwargs.get('data', empty_array)
+        if not isinstance(data, np.ndarray):
+            self._data: np.array = np.array(data)
+        else:
+            self._data: np.array = data
+
+        # Check if dims is a Dimension or a list/tuple of Dimensions
+        dims = kwargs.get('dims', [])
+        if isinstance(dims, Dimension):
+            dims = [dims]
+
+        # If the provided dimensions are less than the data dimensions, fill with default Dimensions
+        while len(dims) < self._data.ndim:
+            dims.append(Dimension())
+
+        self._dims: DimensionArray = DimensionArray(dims)
+
+        # Check if an Amplitude Quantity object is provided
+        if isinstance(kwargs.get('amplitude'), Quantity):
+            self._amplitude: Quantity = kwargs.get('amplitude')
+        else:
+            # Create an Amplitude Quantity object using the provided amp_name and amp_si_unit
+            self._amplitude: Quantity = Quantity(name=kwargs.get('amp_name', 'Amplitude'), 
+                                                 si_unit=kwargs.get('amp_si_unit', ''))
                 
     def copy(self):
         copied_data = self._data.copy()
@@ -155,7 +174,15 @@ class Dimension:
     def __init__(self, **kwargs):
         self._delta: np.float64 = kwargs.get('delta', 1.0)
         self._offset: np.float64 = kwargs.get('offset', 0.0)
-        self.quantity: Quantity = kwargs.get('quantity', Quantity())
+        
+        # Check if a Quantity object is provided
+        if isinstance(kwargs.get('quantity'), Quantity):
+            self.quantity: Quantity = kwargs.get('quantity')
+        else:
+            # Create a Quantity object using the provided name and si_unit
+            self.quantity: Quantity = Quantity(name = kwargs.get('name', 'Samples'), 
+                                               si_unit = kwargs.get('si_unit', ''))
+
         
         if not isinstance(self._delta, np.float64):
             self._delta = np.float64(self._delta)
@@ -238,6 +265,8 @@ class DimensionArray:
                 self.dim_array = np.array([arg], dtype=Dimension)
             elif isinstance(arg, (list, tuple, np.ndarray)) and all(isinstance(dim, Dimension) for dim in arg): # Array of Dimension input
                 self.dim_array = np.array(arg, dtype=Dimension) 
+            elif isinstance(arg, DimensionArray) and all(isinstance(dim, Dimension) for dim in arg):
+                self.dim_array = np.array(arg.dim_array, dtype=Dimension)   
             else:
                 raise ValueError("Invalid input. Please provide an empty input, a single Dimension object, or an array of Dimension objects.")
         else:

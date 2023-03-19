@@ -26,6 +26,33 @@ class SignalTests(unittest.TestCase):
     # def tearDown(self):
         # plt.close('all')  # Close all open figures
         
+    def test_constructor1(self):
+        
+        dimensions = [Dimension(delta=0.1), Dimension(delta=0.2)]
+        data=[[0, 1, 2, 3], [4, 5, 6, 7]]
+        
+        sig = Signal(dims=dimensions, data=data, amp_name='dB')
+        self.assertTrue(np.array_equal(sig.data, [[0, 1, 2, 3], [4, 5, 6, 7]]))
+        self.assertEqual(len(sig.dims.dim_array), 2)
+        self.assertEqual(sig.amplitude.name, 'dB')    
+        
+    def test_constructor2(self):
+        data = [[[0, 1, 2, 3], [4, 5, 6, 7]], [[8, 9, 10, 11], [7, 6, 5, 4]]]
+        dims = Dimension(delta=0.1, name='Time')
+        sig = Signal(dims=dims, data=data, amp_name='dB')
+        self.assertTrue(np.array_equal(sig.data, [[[0, 1, 2, 3], [4, 5, 6, 7]], [[8, 9, 10, 11], [7, 6, 5, 4]]]))
+        self.assertEqual(len(sig.dims.dim_array), 3)
+        self.assertEqual(sig.dims.dim_array[0].quantity.name, 'Time')
+        self.assertEqual(sig.amplitude.name, 'dB')
+        
+    def test_constructor3(self):
+        data = [[[0, 1, 2, 3], [4, 5, 6, 7]], [[8, 9, 10, 11], [7, 6, 5, 4]]]
+        dims=[Dimension(delta=0.1), Dimension(delta=0.2)]
+        sig = Signal(dims=dims, data=data, amp_name='dB')
+        self.assertTrue(np.array_equal(sig.data, [[[0, 1, 2, 3], [4, 5, 6, 7]], [[8, 9, 10, 11], [7, 6, 5, 4]]]))
+        self.assertEqual(len(sig.dims.dim_array), 3)
+        self.assertEqual(sig.amplitude.name, 'dB')
+        
     def test_plot(self):
         # Test with a new figure
         ax = self.signal.plot()
@@ -196,6 +223,27 @@ class TestDimension(unittest.TestCase):
         self.assertEqual(d2.quantity._si_unit, d1.quantity._si_unit)
         self.assertIsNot(d2, d1)
         self.assertIsNot(d2.quantity, d1.quantity)
+    
+    def test_constructor(self):
+        """
+        Test the two version of the constructor
+        """
+        
+        # Create a Quantity object
+        q = Quantity(name='length', si_unit='m')
+        # Create a Dimension object
+        d1 = Dimension(delta=0.1, offset=1.0, quantity=q)
+        self.assertEqual(d1._delta,  0.1)
+        self.assertEqual(d1._offset, 1)
+        self.assertEqual(d1.quantity._name, 'length')
+        self.assertEqual(d1.quantity._si_unit, 'm')
+        
+        d2 = Dimension(delta=0.2, offset=0.5, name='time', si_unit='s')
+        self.assertEqual(d2._delta,  0.2)
+        self.assertEqual(d2._offset, 0.5)
+        self.assertEqual(d2.quantity._name, 'time')
+        self.assertEqual(d2.quantity._si_unit, 's')
+        
             
     def test_to_sample(self):
         value = 15.0
