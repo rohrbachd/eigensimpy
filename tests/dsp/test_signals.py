@@ -23,6 +23,11 @@ class SignalTests(unittest.TestCase):
         amplitude = Quantity(name='Amplitude', si_unit='')
         self.signal = Signal(data=data, dims=dims, amplitude=amplitude);
         
+        self.signal1 = Signal(data=np.array([[1, 2], [3, 4]]), dims=DimensionArray([Dimension(), Dimension()]))
+        self.signal2 = Signal(data=np.array([[5, 6], [7, 8]]), dims=DimensionArray([Dimension(), Dimension()]))
+        self.scalar = 2
+        
+        
     # def tearDown(self):
         # plt.close('all')  # Close all open figures
         
@@ -105,8 +110,6 @@ class SignalTests(unittest.TestCase):
             self.assertEqual(d2._offset, d1._offset)
             self.assertEqual(d2.quantity._name, d1.quantity._name)
             self.assertEqual(d2.quantity._si_unit, d1.quantity._si_unit)
-            self.assertIsNot(d2, d1)
-            self.assertIsNot(d2.quantity, d1.quantity)
             
     def test_crop(self):
         # Test cropping along the first dimension
@@ -167,7 +170,73 @@ class SignalTests(unittest.TestCase):
         self.assertEqual(permuted_signal.dims[0], expected_dims[0])
         self.assertEqual(permuted_signal.dims[1], expected_dims[1])
         self.assertEqual(permuted_signal.dims[2], expected_dims[2])
+
+
+    def test_add(self):
+        result = self.signal1 + self.signal2
+        expected_data = np.array([[6, 8], [10, 12]])
+        np.testing.assert_array_equal(result.data, expected_data)
+        self.assertEqual(result.dims[0], self.signal1.dims[0])
+        self.assertEqual(result.dims[1], self.signal1.dims[1])
+
+    def test_radd(self):
+        result = self.scalar + self.signal1
+        expected_data = np.array([[3, 4], [5, 6]])
+        np.testing.assert_array_equal(result.data, expected_data)
+        self.assertEqual(result.dims[0], self.signal1.dims[0])
+        self.assertEqual(result.dims[1], self.signal1.dims[1])
         
+    def test_sub(self):
+        result = self.signal1 - self.signal2
+        expected_data = np.array([[-4, -4], [-4, -4]])
+        np.testing.assert_array_equal(result.data, expected_data)
+        self.assertEqual(result.dims[0], self.signal1.dims[0])
+        self.assertEqual(result.dims[1], self.signal1.dims[1])
+    def test_rsub(self):
+        result = self.scalar - self.signal1
+        expected_data = np.array([[1, 0], [-1, -2]])
+        np.testing.assert_array_equal(result.data, expected_data)
+        self.assertEqual(result.dims[0], self.signal1.dims[0])
+        self.assertEqual(result.dims[1], self.signal1.dims[1])
+    def test_mul(self):
+        result = self.signal1 * self.scalar
+        expected_data = np.array([[2, 4], [6, 8]])
+        np.testing.assert_array_equal(result.data, expected_data)
+        self.assertEqual(result.dims[0], self.signal1.dims[0])
+        self.assertEqual(result.dims[1], self.signal1.dims[1])
+    def test_rmul(self):
+        result = self.scalar * self.signal1
+        expected_data = np.array([[2, 4], [6, 8]])
+        np.testing.assert_array_equal(result.data, expected_data)
+        self.assertEqual(result.dims[0], self.signal1.dims[0])
+        self.assertEqual(result.dims[1], self.signal1.dims[1])
+    def test_truediv(self):
+        result = self.signal1 / self.scalar
+        expected_data = np.array([[0.5, 1], [1.5, 2]])
+        np.testing.assert_array_almost_equal(result.data, expected_data)
+        self.assertEqual(result.dims[0], self.signal1.dims[0])
+        self.assertEqual(result.dims[1], self.signal1.dims[1])
+    def test_rtruediv(self):
+        result = self.scalar / self.signal1
+        expected_data = np.array([[2, 1], [2/3, 0.5]])
+        np.testing.assert_array_almost_equal(result.data, expected_data)
+        self.assertEqual(result.dims[0], self.signal1.dims[0])
+        self.assertEqual(result.dims[1], self.signal1.dims[1])
+    def test_matmul(self):
+        result = self.signal1 @ self.signal2
+        expected_data = np.array([[19, 22], [43, 50]])
+        np.testing.assert_array_equal(result.data, expected_data)
+        self.assertEqual(result.dims[0], self.signal1.dims[0])
+        self.assertEqual(result.dims[1], self.signal1.dims[1])
+        
+    # TODO: this needs to be supported but difficult at this point 
+    # def test_rmatmul(self):
+    #     result = self.signal1.data @ self.signal2  # using self.signal1.data for testing
+    #     expected_data = np.array([[23, 34], [31, 46]])
+    #     np.testing.assert_array_equal(result.data, expected_data)
+    #     self.assertEqual(result.dims[0], self.signal2.dims[0])
+    #     self.assertEqual(result.dims[1], self.signal2.dims[1])                 
+                                 
 class TestQuantity(unittest.TestCase):
     def test_label_with_si_unit(self):
         q = Quantity(name='Length', si_unit='m')
@@ -198,6 +267,38 @@ class TestQuantity(unittest.TestCase):
         self.assertEqual(q2._name, q1._name)
         self.assertEqual(q2._si_unit, q1._si_unit)
         self.assertIsNot(q2, q1)    
+        
+    def test_new_method(self):
+        q1 = Quantity(name='length', si_unit='m')
+        q2 = q1.new(si_unit='cm')
+
+        self.assertEqual(q2.name, 'length')
+        self.assertEqual(q2.si_unit, 'cm')
+
+        q3 = q1.new(name='time')
+        self.assertEqual(q3.name, 'time')
+        self.assertEqual(q3.si_unit, 'm')
+
+        q4 = q1.new(name='time', si_unit='s')
+        self.assertEqual(q4.name, 'time')
+        self.assertEqual(q4.si_unit, 's')
+
+    def test_string_conversion(self):
+        q1 = Quantity(name='length', si_unit='m')
+        self.assertEqual(str(q1), "Quantity(name='length', si_unit='m')")
+
+        q2 = Quantity(name='mass', si_unit='kg')
+        self.assertEqual(str(q2), "Quantity(name='mass', si_unit='kg')")
+
+    def test_immutable_properties(self):
+        q1 = Quantity(name='length', si_unit='m')
+
+        with self.assertRaises(AttributeError):
+            q1.name = 'time'
+
+        with self.assertRaises(AttributeError):
+            q1.si_unit = 's'
+    
 
 class TestDimension(unittest.TestCase):
     def setUp(self):
@@ -205,7 +306,38 @@ class TestDimension(unittest.TestCase):
         self.dim2 = Dimension(delta=0.1, offset=0, quantity=Quantity(name='Frequency',  si_unit='Hz'))
         self.dim3 = Dimension(delta=1,   offset=0, quantity=Quantity(name='Length',     si_unit='m'))
         self.dimConvert = Dimension(delta=2.0, offset=10.0)
-      
+    
+    def test_new_method(self):
+        q1 = Quantity(name='length', si_unit='m')
+        d1 = Dimension(delta=1.0, offset=0.0, quantity=q1)
+
+        d2 = d1.new(delta=2.0)
+        self.assertEqual(d2.delta, 2.0)
+        self.assertEqual(d2.offset, 0.0)
+        self.assertEqual(d2.quantity, q1)
+
+        d3 = d1.new(offset=5.0)
+        self.assertEqual(d3.delta, 1.0)
+        self.assertEqual(d3.offset, 5.0)
+        self.assertEqual(d3.quantity, q1)
+
+        d4 = d1.new(name='time', si_unit='s')
+        self.assertEqual(d4.delta, 1.0)
+        self.assertEqual(d4.offset, 0.0)
+        self.assertEqual(d4.quantity.name, 'time')
+        self.assertEqual(d4.quantity.si_unit, 's')
+
+    def test_string_conversion(self):
+        q1 = Quantity(name='length', si_unit='m')
+        d1 = Dimension(delta=1.0, offset=0.0, quantity=q1)
+
+        self.assertEqual(str(d1), f"Dimension(delta={np.float64(1.0)}, offset={np.float64(0.0)}, quantity={q1})")
+
+        d2 = Dimension(delta=2.0, offset=5.0, name='time', si_unit='s')
+        q2 = Quantity(name='time', si_unit='s')
+        self.assertEqual(str(d2), f"Dimension(delta={np.float64(2.0)}, offset={np.float64(5.0)}, quantity={q2})")
+
+  
     def test_dimension_copy(self):
         # Create a Quantity object
         q = Quantity(name='length', si_unit='m')
@@ -339,8 +471,6 @@ class TestDimensionArray(unittest.TestCase):
             self.assertEqual(d2._offset, d1._offset)
             self.assertEqual(d2.quantity._name, d1.quantity._name)
             self.assertEqual(d2.quantity._si_unit, d1.quantity._si_unit)
-            self.assertIsNot(d2, d1)
-            self.assertIsNot(d2.quantity, d1.quantity)
         
     def test_find_dim_name(self):
         self.assertTrue(np.array_equal(self.da.find_dim_name('length'), [True, False, False]))
@@ -352,36 +482,36 @@ class TestDimensionArray(unittest.TestCase):
         self.assertTrue(np.array_equal(self.da.find_dim_nameIndex('length'), [0]))
         self.assertTrue(np.array_equal(self.da.find_dim_nameIndex('energy'), []))
         
-    def test_set_dim_unit(self):
-        self.da[0].si_unit = 'cm'
-        self.assertEqual(self.da[0].quantity.si_unit, 'cm')
+    # def test_set_dim_unit(self):
+    #     self.da[0].si_unit = 'cm'
+    #     self.assertEqual(self.da[0].quantity.si_unit, 'cm')
         
-        self.da[2].si_unit = 'lb';
-        self.assertEqual(self.da[2].quantity.si_unit, 'lb')
+    #     self.da[2].si_unit = 'lb';
+    #     self.assertEqual(self.da[2].quantity.si_unit, 'lb')
     
-    def test_set_dim_name(self):
+    # def test_set_dim_name(self):
         
-        self.da[0].name = 'distance'
-        self.assertEqual(self.da[0].name, 'distance')
+    #     self.da[0].name = 'distance'
+    #     self.assertEqual(self.da[0].name, 'distance')
         
-        self.da[2].name = 'weight';
-        self.assertEqual(self.da[2].quantity.name, 'weight')
+    #     self.da[2].name = 'weight';
+    #     self.assertEqual(self.da[2].quantity.name, 'weight')
         
     
-    def test_set_dim_delta(self):
-        self.da[0].delta = 0.1
-        self.assertEqual(self.da[0].delta, 0.1)
+    # def test_set_dim_delta(self):
+    #     self.da[0].delta = 0.1
+    #     self.assertEqual(self.da[0].delta, 0.1)
         
-        self.da[2].delta = 0.3;
-        self.assertEqual(self.da[2].delta, 0.3)
+    #     self.da[2].delta = 0.3;
+    #     self.assertEqual(self.da[2].delta, 0.3)
 
     
-    def test_set_dim_offset(self):
-        self.da[0].offset = 0.5
-        self.assertEqual(self.da[0].offset, 0.5)
+    # def test_set_dim_offset(self):
+    #     self.da[0].offset = 0.5
+    #     self.assertEqual(self.da[0].offset, 0.5)
         
-        self.da[2].offset = 2.3;
-        self.assertEqual(self.da[2].offset, 2.3)
+    #     self.da[2].offset = 2.3;
+    #     self.assertEqual(self.da[2].offset, 2.3)
         
     
     def test_input_array_error(self):

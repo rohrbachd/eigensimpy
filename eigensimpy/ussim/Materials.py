@@ -23,24 +23,40 @@ class ViscousMaterial:
 
     def to_media(self, size, dimension=None):
     
-        comp_sos_data    = np.zeros(size) + self.comp_sos
-        shear_sos_data   = np.zeros(size) + self.shear_sos
-        density_data     = np.zeros(size) + self.density
-        comp_atten_data  = np.zeros(size) + self.comp_atten
-        shear_atten_data = np.zeros(size) + self.shear_atten
+        comp_sos_data    = np.zeros(size) + self.comp_sos.magnitude
+        shear_sos_data   = np.zeros(size) + self.shear_sos.magnitude
+        density_data     = np.zeros(size) + self.density.magnitude
+        comp_atten_data  = np.zeros(size) + self.comp_atten.magnitude
+        shear_atten_data = np.zeros(size) + self.shear_atten.magnitude
+        
+        amp_names = {
+            "comp_sos":     "speed of sound",
+            "shear_sos":    "speed of sound",
+            "density":      "density",
+            "comp_atten":   "attenuation",
+            "shear_atten":  "attenuation"
+        }
+
+        amp_si_units = {
+            "comp_sos":     str(self.comp_sos.units),
+            "shear_sos":    str(self.shear_sos.units),
+            "density":      str(self.density.units),
+            "comp_atten":   str(self.comp_atten.units),
+            "shear_atten":  str(self.shear_atten.units)
+        }
 
         if dimension:
-            comp_sos    = Signal(data=comp_sos_data, dims=dimension)
-            shear_sos   = Signal(data=shear_sos_data, dims=dimension)
-            density     = Signal(data=density_data, dims=dimension)
-            comp_atten  = Signal(data=comp_atten_data, dims=dimension)
-            shear_atten = Signal(data=shear_atten_data, dims=dimension)
+            comp_sos    = Signal(data=comp_sos_data,    dims=dimension, amp_name=amp_names["comp_sos"],     amp_si_unit=amp_si_units["comp_sos"])
+            shear_sos   = Signal(data=shear_sos_data,   dims=dimension, amp_name=amp_names["shear_sos"],    amp_si_unit=amp_si_units["shear_sos"])
+            density     = Signal(data=density_data,     dims=dimension, amp_name=amp_names["density"],      amp_si_unit=amp_si_units["density"])
+            comp_atten  = Signal(data=comp_atten_data,  dims=dimension, amp_name=amp_names["comp_atten"],   amp_si_unit=amp_si_units["comp_atten"])
+            shear_atten = Signal(data=shear_atten_data, dims=dimension, amp_name=amp_names["shear_atten"],  amp_si_unit=amp_si_units["shear_atten"])
         else:
-            comp_sos    = Signal(data=comp_sos_data)
-            shear_sos   = Signal(data=shear_sos_data)
-            density     = Signal(data=density_data)
-            comp_atten  = Signal(data=comp_atten_data)
-            shear_atten = Signal(data=shear_atten_data)
+            comp_sos    = Signal(data=comp_sos_data,    amp_name=amp_names["comp_sos"],     amp_si_unit=amp_si_units["comp_sos"])
+            shear_sos   = Signal(data=shear_sos_data,   amp_name=amp_names["shear_sos"],    amp_si_unit=amp_si_units["shear_sos"])
+            density     = Signal(data=density_data,     amp_name=amp_names["density"],      amp_si_unit=amp_si_units["density"])
+            comp_atten  = Signal(data=comp_atten_data,  amp_name=amp_names["comp_atten"],   amp_si_unit=amp_si_units["comp_atten"])
+            shear_atten = Signal(data=shear_atten_data, amp_name=amp_names["shear_atten"],  amp_si_unit=amp_si_units["shear_atten"])
 
         isotropic_acoustic_media = IsotropicAcousticMedia(
             comp_sos = comp_sos,

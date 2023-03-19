@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+  
 
 class Signal:
     def __init__(self,**kwargs):
@@ -100,7 +101,7 @@ class Signal:
             raise ValueError("End index is out of bounds")
                 
         self._data = self._data[start_idx:end_idx]
-        self._dims[0].offset = start;        
+        self._dims[0] = self._dims[0].new( offset = start );        
         
         return self
         
@@ -115,6 +116,71 @@ class Signal:
     def __repr__(self):
         return f"Signal(data={self._data}, dims={self._dims.dim_array})"
     
+    """ ***** Basic Signal Class operations """
+    def __add__(self, other):
+        if isinstance(other, Signal):
+            result_data = self._data + other._data
+        else:
+            result_data = self._data + other
+        return Signal(data=result_data, dims=self._dims.copy(), amplitude=self._amplitude)
+
+    def __sub__(self, other):
+        if isinstance(other, Signal):
+            result_data = self._data - other._data
+        else:
+            result_data = self._data - other
+        return Signal(data=result_data, dims=self._dims.copy(), amplitude=self._amplitude)
+
+    def __mul__(self, other):
+        if isinstance(other, Signal):
+            result_data = self._data * other._data
+        else:
+            result_data = self._data * other
+        return Signal(data=result_data, dims=self._dims.copy(), amplitude=self._amplitude)
+
+    def __truediv__(self, other):
+        if isinstance(other, Signal):
+            result_data = self._data / other._data
+        else:
+            result_data = self._data / other
+        return Signal(data=result_data, dims=self._dims.copy(), amplitude=self._amplitude)
+
+    def __matmul__(self, other):
+        if isinstance(other, Signal):
+            result_data = self._data @ other._data
+        else:
+            result_data = self._data @ other
+        return Signal(data=result_data, dims=self._dims.copy(), amplitude=self._amplitude)
+
+    def __pow__(self, other):
+        result_data = self._data ** other
+        return Signal(data=result_data, dims=self._dims.copy(), amplitude=self._amplitude)
+
+    def __radd__(self, other):
+        return self.__add__(other)
+
+    def __rsub__(self, other):
+        return self.__neg__().__add__(other)
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+    def __rtruediv__(self, other):
+        if isinstance(other, np.ndarray):
+            result_data = other / self._data
+        else:
+            result_data = np.divide(other, self._data)
+        return Signal(data=result_data, dims=self._dims.copy(), amplitude=self._amplitude)
+
+    def __rmatmul__(self, other):
+        result_data = other @ self._data
+        return Signal(data=result_data, dims=self._dims.copy(), amplitude=self._amplitude)
+    
+    def __neg__(self):
+        neg_data = -self._data
+        return Signal(data=neg_data, dims=self._dims.copy(), amplitude=self._amplitude.copy())
+
+
 class Quantity:
     """
     A class that represents a physical or non-physical quantity, such as length, mass, time, etc.
@@ -122,12 +188,24 @@ class Quantity:
     Attributes:
         _name (str): The name of the quantity.
         _si_unit (str): The SI unit of the quantity.
+        
+    Quantity is immutable. use the new method to create variants of an object    
     """
     
     def __init__(self, **kwargs):
+        
+        self._is_mutable = True
         self._name = kwargs.get('name', '')
         self._si_unit = kwargs.get('si_unit', '')
-        
+        self._is_mutable = False
+    
+    def new(self, **kwargs):
+        new_kwargs = {
+            'name': kwargs.get('name', self.name),
+            'si_unit': kwargs.get('si_unit', self.si_unit)
+        }
+        return Quantity(**new_kwargs)    
+    
     @property
     def name(self):
         return self._name
@@ -136,14 +214,6 @@ class Quantity:
     def si_unit(self):
         return self._si_unit
     
-    @name.setter
-    def name(self, value):
-        self._name = value
-    
-    @si_unit.setter
-    def si_unit(self, value):
-        self._si_unit = value
-            
     @property
     def label(self):
         """
@@ -160,18 +230,29 @@ class Quantity:
     
     def copy(self):
         return Quantity(name=self.name, si_unit=self.si_unit)
-    
-    
+
+
+    def __setattr__(self, name, value):
+        if hasattr(self, '_is_mutable') and not self._is_mutable:
+            raise AttributeError("Cannot modify an immutable Quantity instance")
+        super().__setattr__(name, value)
+        
+    def __str__(self):
+        return f"Quantity(name='{self.name}', si_unit='{self.si_unit}')"
+
     def __eq__(self, other):
         return (self.si_unit == other.si_unit) and (self.name == other.name)
     
     def __ne__(self, other):
         return not self.__eq__(other)
-    
 
+            
+            
 class Dimension:
     
     def __init__(self, **kwargs):
+        
+        self._is_mutable = True
         self._delta: np.float64 = kwargs.get('delta', 1.0)
         self._offset: np.float64 = kwargs.get('offset', 0.0)
         
@@ -182,13 +263,41 @@ class Dimension:
             # Create a Quantity object using the provided name and si_unit
             self.quantity: Quantity = Quantity(name = kwargs.get('name', 'Samples'), 
                                                si_unit = kwargs.get('si_unit', ''))
-
         
         if not isinstance(self._delta, np.float64):
             self._delta = np.float64(self._delta)
 
         if not isinstance(self._offset, np.float64):
             self._offset = np.float64(self._offset)
+
+        self._is_mutable = False
+    
+    def new(self, **kwargs):
+        
+        if isinstance(kwargs.get('quantity'), Quantity):
+            new_kwargs = {
+                'delta': kwargs.get('delta', self._delta),
+                'offset': kwargs.get('offset', self._offset),
+                'quantity': kwargs.get('quantity', self.quantity)
+            }
+        else:
+            new_kwargs = {
+                'delta': kwargs.get('delta', self._delta),
+                'offset': kwargs.get('offset', self._offset),
+                'name': kwargs.get('name', self.quantity.name),
+                'si_unit': kwargs.get('si_unit', self.quantity.si_unit)
+            }
+        return Dimension(**new_kwargs)
+
+    def __str__(self):
+        return f"Dimension(delta={self._delta}, offset={self._offset}, quantity={self.quantity})"
+
+    
+    def dim_vector(self, numElem):
+        basevec = np.arange(numElem).astype(np.float64)
+        prod = self.delta * basevec
+        vec = self.offset + prod
+        return vec    
 
     def copy(self):
         return Dimension(delta=self.delta, offset=self.offset, quantity=self.quantity.copy())
@@ -205,37 +314,17 @@ class Dimension:
     def delta(self) -> np.float64:
         return self._delta
 
-    @delta.setter
-    def delta(self, value):
-        if not isinstance(value, np.float64):
-            value = np.float64(value)
-        self._delta = value
-
     @property
     def offset(self) -> np.float64:
         return self._offset
-
-    @offset.setter
-    def offset(self, value):
-        if not isinstance(value, np.float64):
-            value = np.float64(value)
-        self._offset = value        
-        
+                   
     @property
     def si_unit(self):
         return self.quantity.si_unit
     
-    @si_unit.setter
-    def si_unit(self, value):
-        self.quantity.si_unit = value
-        
     @property
     def name(self):
         return self.quantity.name
-    
-    @name.setter
-    def name(self, value):
-        self.quantity.name = value
         
     @property
     def label(self):
@@ -247,11 +336,31 @@ class Dimension:
     def __ne__(self, other):
         return not self.__eq__(other)
     
-    def dim_vector(self, numElem):
-        basevec = np.arange(numElem).astype(np.float64)
-        prod = self.delta * basevec
-        vec = self.offset + prod
-        return vec
+    def __setattr__(self, name, value):
+        if hasattr(self, '_is_mutable') and not self._is_mutable:
+            raise AttributeError("Cannot modify an immutable Dimension instance")
+        super().__setattr__(name, value)
+        
+        
+    # @si_unit.setter
+    # def si_unit(self, value):
+    #     self.quantity.si_unit = value
+            
+    # @delta.setter
+    # def delta(self, value):
+    #     if not isinstance(value, np.float64):
+    #         value = np.float64(value)
+    #     self._delta = value
+        
+    # @offset.setter
+    # def offset(self, value):
+    #     if not isinstance(value, np.float64):
+    #         value = np.float64(value)
+    #     self._offset = value        
+    
+    # @name.setter
+    # def name(self, value):
+    #     self.quantity.name = value    
     
 
 class DimensionArray:
@@ -289,6 +398,6 @@ class DimensionArray:
         return len(self.dim_array)
     
     def copy(self):
-        copied_dim_array = [dim.copy() for dim in self.dim_array]
+        copied_dim_array = [dim for dim in self.dim_array]
         return DimensionArray(copied_dim_array)
     
