@@ -397,6 +397,16 @@ class DimensionArray:
     def __len__(self):
         return len(self.dim_array)
     
+    def __eq__(self, other):
+        if isinstance(other, DimensionArray):
+            if len(self) == len(other):
+                return all(dim1 == dim2 for dim1, dim2 in zip(self.dim_array, other.dim_array))
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    
     def copy(self):
         copied_dim_array = [dim for dim in self.dim_array]
         return DimensionArray(copied_dim_array)

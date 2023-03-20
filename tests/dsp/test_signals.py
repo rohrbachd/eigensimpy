@@ -419,6 +419,33 @@ class TestDimension(unittest.TestCase):
         
 class TestDimensionArray(unittest.TestCase):
     
+    def setUp(self):
+        self.dim1 = Dimension(name="time", unit="s")
+        self.dim2 = Dimension(name="frequency", unit="Hz")
+        self.dim3 = Dimension(name="distance", unit="m")
+
+        self.dim_array1 = DimensionArray([self.dim1, self.dim2])
+        self.dim_array2 = DimensionArray([self.dim1, self.dim2])
+        self.dim_array3 = DimensionArray([self.dim1, self.dim3])
+        self.dim_array4 = DimensionArray([self.dim1])
+
+        self.dim_array = np.array([
+            Dimension(delta=1.0, offset=0.0, quantity=Quantity(si_unit='m', name='length', label='L')),
+            Dimension(delta=2.0, offset=1.0, quantity=Quantity(si_unit='s', name='time', label='T')),
+            Dimension(delta=0.5, offset=2.0, quantity=Quantity(si_unit='kg', name='mass', label='M'))
+        ])
+        self.da = DimensionArray(self.dim_array)
+        
+    def test_equality(self):
+        self.assertEqual(self.dim_array1, self.dim_array2)
+        self.assertNotEqual(self.dim_array1, self.dim_array3)
+        self.assertNotEqual(self.dim_array1, self.dim_array4)
+
+    def test_inequality(self):
+        self.assertFalse(self.dim_array1 != self.dim_array2)
+        self.assertTrue(self.dim_array1 != self.dim_array3)
+        self.assertTrue(self.dim_array1 != self.dim_array4)
+        
     def test_empty_input(self):
         dim_array1 = DimensionArray()
         self.assertEqual(dim_array1.dim_array.size, 0)
@@ -439,13 +466,6 @@ class TestDimensionArray(unittest.TestCase):
         self.assertIs(dim_array3.dim_array[1], dim2)
         self.assertIs(dim_array3.dim_array[2], dim3)
         
-    def setUp(self):
-        self.dim_array = np.array([
-            Dimension(delta=1.0, offset=0.0, quantity=Quantity(si_unit='m', name='length', label='L')),
-            Dimension(delta=2.0, offset=1.0, quantity=Quantity(si_unit='s', name='time', label='T')),
-            Dimension(delta=0.5, offset=2.0, quantity=Quantity(si_unit='kg', name='mass', label='M'))
-        ])
-        self.da = DimensionArray(self.dim_array)
     
     def test_dimension_array_copy(self):
         # Create a Quantity object
