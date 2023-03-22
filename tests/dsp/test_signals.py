@@ -110,7 +110,54 @@ class SignalTests(unittest.TestCase):
             self.assertEqual(d2._offset, d1._offset)
             self.assertEqual(d2.quantity._name, d1.quantity._name)
             self.assertEqual(d2.quantity._si_unit, d1.quantity._si_unit)
-          
+   
+    def test_set_value_at(self):
+        # Test setting a single value along the first dimension
+        data = np.array([[1,  2,  3,  4 ],
+                        [4,  5,  6,  7], 
+                        [7,  8,  9,  10], 
+                        [10, 11, 12, 13],
+                        [1,  2,  3,  4 ],
+                        [4,  5,  6,  7],
+                        [7,  8,  9,  10],])
+            
+        dims = DimensionArray([Dimension(quantity=Quantity(name="time", si_unit="s"), delta=0.5, offset=2),
+                            Dimension(quantity=Quantity(name="channel", si_unit="V"), delta=2.0, offset=3.1)])
+        signal = Signal(data=data, dims=dims)
+
+        signal.set_value_at(99, 3.5, axis=0)
+
+        expected_data = np.array([[1,  2,  3,  4 ],
+                                [4,  5,  6,  7], 
+                                [7,  8,  9,  10], 
+                                [99, 99, 99, 99],
+                                [1,  2,  3,  4 ],
+                                [4,  5,  6,  7],
+                                [7,  8,  9,  10]])
+
+        np.testing.assert_array_equal(signal.data, expected_data)
+
+        # Test setting a single value along the second dimension
+        signal.set_value_at(88, 5.1, axis=1)
+
+        expected_data = np.array([[1,  88,  3,  4 ],
+                                  [4,  88,  6,  7], 
+                                  [7,  88,  9,  10], 
+                                  [99, 88, 99, 99],
+                                  [1,  88,  3,  4 ],
+                                  [4,  88,  6,  7],
+                                  [7,  88,  9,  10]])
+
+        np.testing.assert_array_equal(signal.data, expected_data)
+
+        # Test setting a value outside the range of the first dimension
+        with self.assertRaises(ValueError):
+            signal.set_value_at(77, 1.5, axis=0)
+                
+        # Test setting a value outside the range of the second dimension
+        with self.assertRaises(ValueError):
+            signal.set_value_at(66, 10.1, axis=1)
+                                   
     def test_value_at(self):
         # Test getting a single value along the first dimension
         data = np.array([[1,  2,  3,  4 ],

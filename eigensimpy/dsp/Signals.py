@@ -107,7 +107,24 @@ class Signal:
         
         return data
         
+    def set_value_at(self, value, position_unit, axis=0) -> None:
+        
+        N = self.shape[axis]
+        sample_idx = self.dims[axis].to_sample(position_unit)
+        
+        if sample_idx < 0:
+            raise ValueError("Start index is out of bounds")
             
+        if sample_idx >= N:
+            raise ValueError("End index is out of bounds")
+            
+        # will create ndim slice objects. Each slice object has 3 elements
+        # (start, stop, step) 
+        slices = [slice(None)] * self.ndim
+        slices[axis] = slice(sample_idx, sample_idx+1)
+                
+        self._data[tuple(slices)] = value
+                
     def crop(self, start, end, axis=0):
         
         N = self.shape[axis]
