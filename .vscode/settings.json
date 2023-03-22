@@ -8,4 +8,13 @@
     ],
     "python.testing.pytestEnabled": false,
     "python.testing.unittestEnabled": true
+
+    "workbench.colorCustomizations": {
+        "activityBar.background": "#333333",
+        "activityBar.foreground": "#ffffff",
+        "activityBar.inactiveForeground": "#cccccc",
+        "activityBar.border": "#333333",
+    },
+    "editor.fontSize": 14,
+    "window.zoomLevel": 0.3,
 }

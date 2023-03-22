@@ -110,7 +110,42 @@ class SignalTests(unittest.TestCase):
             self.assertEqual(d2._offset, d1._offset)
             self.assertEqual(d2.quantity._name, d1.quantity._name)
             self.assertEqual(d2.quantity._si_unit, d1.quantity._si_unit)
+          
+    def test_value_at(self):
+        # Test getting a single value along the first dimension
+        data = np.array([[1,  2,  3,  4 ],
+                        [4,  5,  6,  7], 
+                        [7,  8,  9,  10], 
+                        [10, 11, 12, 13],
+                        [1,  2,  3,  4 ],
+                        [4,  5,  6,  7],
+                        [7,  8,  9,  10],])
             
+        dims = DimensionArray([Dimension(quantity=Quantity(name="time", si_unit="s"), delta=0.5, offset=2),
+                            Dimension(quantity=Quantity(name="channel", si_unit="V"), delta=2.0, offset=3.1)])
+        signal = Signal(data=data, dims=dims)
+
+        value = signal.value_at(3.5, axis=0)
+
+        expected_value = np.array([[10, 11, 12, 13]])
+            
+        np.testing.assert_array_equal(value, expected_value)
+
+        # Test getting a single value along the second dimension
+        value = signal.value_at(5.1, axis=1)
+
+        expected_value = np.array([[2], [5], [8], [11], [2], [5], [8]])
+            
+        np.testing.assert_array_equal(value, expected_value)
+
+        # Test getting a value outside the range of the first dimension
+        with self.assertRaises(ValueError):
+            value = signal.value_at(1.5, axis=0)
+                
+        # Test getting a value outside the range of the second dimension
+        with self.assertRaises(ValueError):
+            value = signal.value_at(12, axis=1)     
+               
     def test_crop(self):
         # Test cropping along the first dimension
         data = np.array([[1,  2,  3,  4 ],
@@ -141,6 +176,27 @@ class SignalTests(unittest.TestCase):
         self.assertEqual(cropped_signal.dims[0], expected_dims[0])
         self.assertEqual(cropped_signal.dims[1], expected_dims[1])
 
+        signal = Signal(data=data, dims=dims)
+        # Test cropping along the second dimension
+        cropped_signal = signal.crop(4, 8, axis=1)
+
+        expected_data = np.array([  [1, 2 ],
+                                    [4, 5 ], 
+                                    [7, 8 ], 
+                                    [10, 11],
+                                    [1, 2 ],
+                                    [4, 5 ],
+                                    [7, 8 ],])
+        expected_dims = DimensionArray([Dimension(quantity=Quantity(name="time", si_unit="s"), delta=0.5, offset=2),
+                                        Dimension(quantity=Quantity(name="channel", si_unit="V"), delta=2.0, offset=3.1)])
+        expected_offset = 5.1
+
+        np.testing.assert_array_equal(cropped_signal.data, expected_data)
+        self.assertEqual(cropped_signal.ndim, 2)
+        self.assertEqual(cropped_signal.shape, (7, 2))
+        self.assertEqual(cropped_signal.dims[0], expected_dims[0])
+        self.assertEqual(cropped_signal.dims[1], expected_dims[1])
+        
         # Test cropping outside the range of the first dimension
         with self.assertRaises(ValueError):
             cropped_signal = signal.crop(0.5, 4.5)

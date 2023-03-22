@@ -32,6 +32,7 @@ class Signal:
             self._amplitude: Quantity = Quantity(name=kwargs.get('amp_name', 'Amplitude'), 
                                                  si_unit=kwargs.get('amp_si_unit', ''))
                 
+
     def copy(self):
         copied_data = self._data.copy()
         copied_dims = self._dims.copy()
@@ -87,31 +88,62 @@ class Signal:
         else:
             return True
         
-    
-    def crop(self, start, end):
+    def value_at(self, position_unit, axis=0) -> np.ndarray:
         
-        N = self.shape[0]
-        start_idx = self.dims[0].to_sample(start)
-        end_idx   = self.dims[0].to_sample(end)
+        N = self.shape[axis]
+        sample_idx = self.dims[axis].to_sample(position_unit)
+        
+        if sample_idx < 0:
+            raise ValueError("Start index is out of bounds")
+            
+        if sample_idx >= N:
+            raise ValueError("End index is out of bounds")
+        # will create ndim slice objects. Each slice object has 3 elements
+        # (start, stop, step)        
+        slices = [slice(None)] * self.ndim
+        slices[axis] = slice(sample_idx, sample_idx+1)
+                
+        data = self._data[tuple(slices)]
+        
+        return data
+        
+            
+    def crop(self, start, end, axis=0):
+        
+        N = self.shape[axis]
+        start_idx = self.dims[axis].to_sample(start)
+        end_idx   = self.dims[axis].to_sample(end)
         
         if start_idx < 0:
             raise ValueError("Start index is out of bounds")
             
         if end_idx >= N:
             raise ValueError("End index is out of bounds")
+        
+        corrected_start = self.dims[axis].to_unitvalue(start_idx)         
+        # will create ndim slice objects. Each slice object has 3 elements
+        # (start, stop, step)        
+        slices = [slice(None)] * self.ndim
+        slices[axis] = slice(start_idx, end_idx)
                 
-        self._data = self._data[start_idx:end_idx]
-        self._dims[0] = self._dims[0].new( offset = start );        
+        self._data = self._data[tuple(slices)]
+        self._dims[axis] = self._dims[axis].new( offset = corrected_start );        
         
         return self
         
-    def permute(self, order):
+    def permute(self, order): 
         
         self._data = np.transpose(self._data, order)
         self._dims = [self._dims[i] for i in order]
         
         return self
     
+    """ ***** Overwrite [] indexing """    
+    def __getitem__(self, index):
+        return self._data[index]
+
+    def __setitem__(self, index, value):
+        self._data[index] = value
     
     def __repr__(self):
         return f"Signal(data={self._data}, dims={self._dims.dim_array})"
