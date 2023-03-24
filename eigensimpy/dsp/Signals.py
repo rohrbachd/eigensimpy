@@ -33,6 +33,12 @@ class Signal:
                                                  si_unit=kwargs.get('amp_si_unit', ''))
                 
 
+    def num_signals(self, axis):
+        """Calculate the number of signals along the given axis."""
+        
+        flattened_shape = np.delete(self.shape, axis)
+        return np.prod(flattened_shape)
+
     def copy(self):
         copied_data = self._data.copy()
         copied_dims = self._dims.copy()
@@ -123,7 +129,8 @@ class Signal:
         slices = [slice(None)] * self.ndim
         slices[axis] = slice(sample_idx, sample_idx+1)
                 
-        self._data[tuple(slices)] = value
+        self._data[tuple(slices)] = value       
+        
                 
     def crop(self, start, end, axis=0):
         

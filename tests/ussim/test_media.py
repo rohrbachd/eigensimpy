@@ -3,7 +3,7 @@ import unittest
 # Import square function
 from eigensimpy.ussim.Materials import ViscousMaterial
 from eigensimpy.ussim.Media import IsotropicAcousticMedia, IsotropicElasticMedia
-from eigensimpy.dsp.Signals import Signal, Dimension
+from eigensimpy.dsp.Signals import Signal
 from eigensimpy.ureg import unit, neper
 import numpy as np
 

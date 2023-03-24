@@ -57,6 +57,40 @@ class SignalTests(unittest.TestCase):
         self.assertTrue(np.array_equal(sig.data, [[[0, 1, 2, 3], [4, 5, 6, 7]], [[8, 9, 10, 11], [7, 6, 5, 4]]]))
         self.assertEqual(len(sig.dims.dim_array), 3)
         self.assertEqual(sig.amplitude.name, 'dB')
+       
+    def test_num_signals(self):
+        # Test num_signals along the first dimension
+        data = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+        dims = DimensionArray( [Dimension(quantity=Quantity(name="time", si_unit="s"), delta=1.0, offset=0),
+                                Dimension(quantity=Quantity(name="channel", si_unit="V"), delta=1.0, offset=0)])
+        signal = Signal(data=data, dims=dims)
+
+        num = signal.num_signals(axis=0)
+        self.assertEqual(num, 3 * 1)
+
+        # Test num_signals along the second dimension
+        num = signal.num_signals(axis=1)
+        self.assertEqual(num, 3 * 1)
+
+        # Test num_signals along higher dimensions
+        data = np.zeros((4, 5, 6, 7))
+        dims = DimensionArray([ Dimension(quantity=Quantity(name="time", si_unit="s"), delta=1.0, offset=0),
+                                Dimension(quantity=Quantity(name="channel", si_unit="V"), delta=1.0, offset=0),
+                                Dimension(quantity=Quantity(name="depth", si_unit="m"), delta=1.0, offset=0),
+                                Dimension(quantity=Quantity(name="frequency", si_unit="Hz"), delta=1.0, offset=0)])
+        signal = Signal(data=data, dims=dims)
+
+        num = signal.num_signals(axis=0)
+        self.assertEqual(num, 5 * 6 * 7)
+
+        num = signal.num_signals(axis=1)
+        self.assertEqual(num, 4 * 6 * 7)
+
+        num = signal.num_signals(axis=2)
+        self.assertEqual(num, 4 * 5 * 7)
+
+        num = signal.num_signals(axis=3)
+        self.assertEqual(num, 4 * 5 * 6)
         
     def test_plot(self):
         # Test with a new figure
@@ -111,6 +145,44 @@ class SignalTests(unittest.TestCase):
             self.assertEqual(d2.quantity._name, d1.quantity._name)
             self.assertEqual(d2.quantity._si_unit, d1.quantity._si_unit)
    
+    def test_set_value_at_3D(self):
+    # Test setting a value matrix of size M x K along axis=0
+        data = np.random.rand(5, 4, 3)
+        dims = DimensionArray([Dimension(quantity=Quantity(name="time", si_unit="s"), delta=0.5, offset=2),
+                               Dimension(quantity=Quantity(name="channel", si_unit="V"), delta=2.0, offset=3.1),
+                               Dimension(quantity=Quantity(name="depth", si_unit="m"), delta=1.0, offset=0.0)])
+        signal = Signal(data=data, dims=dims)
+
+        value = np.random.rand(4, 3)
+        position_unit = 3
+        
+        expected_data = np.copy(data)
+        expected_data[2:3, :, :] = value
+        
+        signal.set_value_at(value, position_unit, axis=0)
+
+        np.testing.assert_array_equal(signal.data, expected_data)
+        
+        # Test setting a value matrix of size N x 1 x K along axis=1
+        value = np.random.rand(5, 1, 3)
+        position_unit = 3.5
+        
+        expected_data = np.copy(data)
+        expected_data[:, 0:1, :] = value
+
+        signal.set_value_at(value, position_unit, axis=1)
+
+        # Test setting a value scalar along axis=2
+        value = 7.3 
+        position_unit = 1.2
+
+        expected_data = np.copy(data)
+        expected_data[:, :, 1:2] = value
+
+        signal.set_value_at(value, position_unit, axis=2)
+        
+        np.testing.assert_array_equal(signal.data, expected_data)
+        
     def test_set_value_at(self):
         # Test setting a single value along the first dimension
         data = np.array([[1,  2,  3,  4 ],
@@ -150,6 +222,21 @@ class SignalTests(unittest.TestCase):
 
         np.testing.assert_array_equal(signal.data, expected_data)
 
+        # need to provide a vector in the right format
+        vector = np.array(np.array([7,7,7,7,7,7,7]).reshape(7,-1) )
+        # Test setting a single value along the second dimension
+        signal.set_value_at( vector, 7.3, axis=1)
+
+        expected_data = np.array([[1,  88,  7,  4 ],
+                                  [4,  88,  7,  7], 
+                                  [7,  88,  7,  10], 
+                                  [99, 88,  7, 99],
+                                  [1,  88,  7,  4 ],
+                                  [4,  88,  7,  7],
+                                  [7,  88,  7,  10]])
+
+        np.testing.assert_array_equal(signal.data, expected_data)
+        
         # Test setting a value outside the range of the first dimension
         with self.assertRaises(ValueError):
             signal.set_value_at(77, 1.5, axis=0)
