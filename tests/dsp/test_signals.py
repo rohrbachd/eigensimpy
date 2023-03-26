@@ -92,6 +92,24 @@ class SignalTests(unittest.TestCase):
         num = signal.num_signals(axis=3)
         self.assertEqual(num, 4 * 5 * 6)
         
+    def test_imshow(self):
+        # Test with a new figure
+        ax, img = self.signal.imshow()
+
+        self.assertEqual(ax.get_title(), 'Signal Data as Image')
+        self.assertEqual(ax.get_xlabel(), self.signal.dims[1].label)
+        self.assertEqual(ax.get_ylabel(), self.signal.dims[0].label)
+        self.assertTrue( np.allclose( self.signal.data, img.get_array()) )  
+        
+        # Test with an existing Axes object
+        fig, ax2 = plt.subplots()
+        ax2, img2 = self.signal.imshow(ax=ax2)
+
+        self.assertEqual(ax2.get_title(), 'Signal Data as Image')
+        self.assertEqual(ax2.get_xlabel(), self.signal.dims[1].label)
+        self.assertEqual(ax2.get_ylabel(), self.signal.dims[0].label)
+        self.assertTrue( np.allclose( self.signal.data, img2.get_array()) )
+            
     def test_plot(self):
         # Test with a new figure
         ax = self.signal.plot()

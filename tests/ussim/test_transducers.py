@@ -1,12 +1,165 @@
 import unittest
 
 # Import square function
-from eigensimpy.ussim.Transducers import Emitter, Receiver,EmitterSet2D
+from eigensimpy.ussim.Transducers import Emitter, Receiver, EmitterSet2D, ReceiverSet2D
 from eigensimpy.dsp.Signals import Signal, Dimension, DimensionArray, Quantity
 import numpy as np
 
+class TestReceiverSet2D(unittest.TestCase):
+    
+    def test_receiver_validation_pass(self):
+
+        # Create three receivers with the same signal dimensions
+        dims = [Dimension(quantity=Quantity(name="time", si_unit="s"), delta=0.1, offset=1.4)]
+        data = np.ones(10)
+        sig = Signal(data=data, dims=dims)
+
+        # all have the same signal 
+        r1 = Receiver(position=np.array([[0, 0], [0, 1]]), signal=sig)
+        r2 = Receiver(position=np.array([[1, 0], [1, 1]]), signal=sig)
+        r3 = Receiver(position=np.array([[2, 0], [2, 1]]), signal=sig)
+
+        # Create receiver set with three receivers
+        rs = ReceiverSet2D(receiver_vel1=r1, receiver_vel2=r2, receiver_stress11=r3)
+
+        # Validate receivers, should pass
+        self.assertEquals(rs.num_receivers, 3)
+        self.assertEquals(len(rs.receivers), 3)
+        self.assertEquals(rs.delta, 0.1)
+        self.assertEquals(rs.offset, 1.4)
+        self.assertEquals(rs.time_unit, "s")
+        
+    def test_receiver_validation_fail(self):
+        
+        # Different delta
+        # Create three receivers with the same signal dimensions
+        dims1 = Dimension(quantity=Quantity(name="time", si_unit="s"), delta=0.1, offset=0)
+        dims2 = Dimension(quantity=Quantity(name="time", si_unit="s"), delta=0.2, offset=0)
+        
+        data = np.ones(10)
+        sig1 = Signal(data=data, dims=dims1)
+        sig2 = Signal(data=data, dims=dims2)
+        sig3 = Signal(data=data, dims=dims1)
+        
+        r1 = Receiver(position=np.array([[0, 0], [0, 1]]), signal=sig1)
+        r2 = Receiver(position=np.array([[1, 0], [1, 1]]), signal=sig2)
+        r3 = Receiver(position=np.array([[2, 0], [2, 1]]), signal=sig3)
+        
+        with self.assertRaises(ValueError):
+            ReceiverSet2D(receiver_vel1=r1, receiver_vel2=r2, receiver_stress11=r3)
+            
+        sig2.dims[0] = dims1.new(offset=1)
+        
+        r1 = Receiver(position=np.array([[0, 0], [0, 1]]), signal=sig1)
+        r2 = Receiver(position=np.array([[1, 0], [1, 1]]), signal=sig2)
+        
+        with self.assertRaises(ValueError):
+            ReceiverSet2D(receiver_vel2=r2, receiver_stress11=r1)
+            
+        sig2.dims[0] = dims1
+        sig3.dims[0] = dims1.new(si_unit="MHz", name="frequency")
+        
+        r1 = Receiver(position=np.array([[0, 0], [0, 1]]), signal=sig1)
+        r2 = Receiver(position=np.array([[1, 0], [1, 1]]), signal=sig2)
+        r3 = Receiver(position=np.array([[2, 0], [2, 1]]), signal=sig3)
+        
+        with self.assertRaises(ValueError):
+            ReceiverSet2D(receiver_vel2=r2, receiver_stress11=r1, receiver_stress12=r3)
+        
+        # this should pass now    
+        sig3.dims[0] = dims1
+        r1 = Receiver(position=np.array([[0, 0], [0, 1]]), signal=sig1)
+        r2 = Receiver(position=np.array([[1, 0], [1, 1]]), signal=sig2)
+        r3 = Receiver(position=np.array([[2, 0], [2, 1]]), signal=sig3)
+        
+        rs = ReceiverSet2D(receiver_vel2=r2, receiver_stress11=r1, receiver_stress12=r3)
+        
+        # Validate receivers, should pass
+        self.assertEquals(rs.num_receivers, 3)
+        self.assertEquals(len(rs.receivers), 3)
+        self.assertEquals(rs.delta, 0.1)
+        self.assertEquals(rs.offset, 0)
+        self.assertEquals(rs.time_unit, "s")
+    
 class TestEmitterSet2D(unittest.TestCase):
 
+    def test_emitter_validation_pass(self):
+        
+        # Create three emitters with the same signal dimensions
+        dims = [Dimension(quantity=Quantity(name="time", si_unit="s"), delta=0.1, offset=1.4)]
+        data = np.ones(10)
+        sig = Signal(data=data, dims=dims)
+        
+        # all have the same signal 
+        e1 = Emitter(position=np.array([[0, 0], [0, 1]]), signal=sig)
+        e2 = Emitter(position=np.array([[1, 0], [1, 1]]), signal=sig)
+        e3 = Emitter(position=np.array([[2, 0], [2, 1]]), signal=sig)
+        
+        # Create emitter set with three emitters
+        es = EmitterSet2D(emitter_vel1=e1, emitter_vel2=e2, emitter_stress11=e3)
+        
+        # Validate emitters, should pass
+        self.assertEquals( es.num_emitters, 3);
+        self.assertEquals( len(es.emitters), 3);
+        self.assertEquals( es.delta, 0.1);
+        self.assertEquals( es.offset, 1.4);
+        self.assertEquals( es.time_unit, "s");
+        
+        
+    def test_emitter_validation_fail(self):
+        
+        # Different delta
+        # Create three emitters with the same signal dimensions
+        dims1 = Dimension(quantity=Quantity(name="time", si_unit="s"), delta=0.1, offset=0)
+        dims2 = Dimension(quantity=Quantity(name="time", si_unit="s"), delta=0.2, offset=0)
+        
+        data = np.ones(10)
+        sig1 = Signal(data=data, dims=dims1)
+        sig2 = Signal(data=data, dims=dims2)
+        sig3 = Signal(data=data, dims=dims1)
+        
+        e1 = Emitter(position=np.array([[0, 0], [0, 1]]), signal=sig1)
+        e2 = Emitter(position=np.array([[1, 0], [1, 1]]), signal=sig2)
+        e3 = Emitter(position=np.array([[2, 0], [2, 1]]), signal=sig3)
+        
+        with self.assertRaises(ValueError):
+            EmitterSet2D(emitter_vel1=e1, emitter_vel2=e2, emitter_stress11=e3)
+            
+        sig2.dims[0] = dims1.new( offset=1)
+        
+        e1 = Emitter(position=np.array([[0, 0], [0, 1]]), signal=sig1)
+        e2 = Emitter(position=np.array([[1, 0], [1, 1]]), signal=sig2)
+        
+        with self.assertRaises(ValueError):
+            EmitterSet2D( emitter_vel2=e2, emitter_stress11=e1)
+            
+        sig2.dims[0] = dims1
+        sig3.dims[0] = dims1.new( si_unit="MHz", name="frequency" )
+        
+        e1 = Emitter(position=np.array([[0, 0], [0, 1]]), signal=sig1)
+        e2 = Emitter(position=np.array([[1, 0], [1, 1]]), signal=sig2)
+        e3 = Emitter(position=np.array([[2, 0], [2, 1]]), signal=sig3)
+        
+        with self.assertRaises(ValueError):
+            EmitterSet2D( emitter_vel2=e2, emitter_stress11=e1, emitter_stress12=e3)
+         
+        # this should pass now    
+        sig3.dims[0] = dims1
+        e1 = Emitter(position=np.array([[0, 0], [0, 1]]), signal=sig1)
+        e2 = Emitter(position=np.array([[1, 0], [1, 1]]), signal=sig2)
+        e3 = Emitter(position=np.array([[2, 0], [2, 1]]), signal=sig3)
+        
+        es = EmitterSet2D( emitter_vel2=e2, emitter_stress11=e1, emitter_stress12=e3)
+        
+        # Validate emitters, should pass
+        self.assertEquals( es.num_emitters, 3);
+        self.assertEquals( len(es.emitters), 3);
+        self.assertEquals( es.delta, 0.1);
+        self.assertEquals( es.offset, 0);
+        self.assertEquals( es.time_unit, "s");
+            
+            
+            
     def test_draw_on_map(self):
         
         map = np.zeros((10, 10))
@@ -42,10 +195,10 @@ class TestEmitterSet2D(unittest.TestCase):
             ]
         ))
         
-        emitter_set.draw_on_map(map, 'emitter_ve1')
+        emitter_set.draw_on_map(map, 'emitter_vel1')
         np.testing.assert_equal(map, np.array(
             [
-                [0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
                 [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],

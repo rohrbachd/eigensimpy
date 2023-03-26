@@ -57,7 +57,7 @@ class Signal:
         # else:
         #     show_plot = False
 
-        ax.plot(x_data, y_data)
+        lines = ax.plot(x_data, y_data)
 
         ax.set_xlabel(self.dims[0].label)
         ax.set_ylabel(self.amplitude.label)
@@ -66,7 +66,29 @@ class Signal:
         # if show_plot:
         #     plt.show()
 
-        return ax
+        return ax, lines
+    
+    def imshow(self, ax=None):
+        if len(self.data.shape) < 2:
+            raise ValueError("Data must be a 2D array for imshow.")
+
+        if ax is None:
+            fig, ax = plt.subplots()
+
+        # in images and figures the first dimension (0) is y, Vertical
+        # the second dimension (1) is x, Horizontal
+        y_data = self.dims[0].dim_vector(self.data.shape[0])
+        x_data = self.dims[1].dim_vector(self.data.shape[1])
+
+        img = ax.imshow(self.data, origin='lower', extent=[x_data[0], x_data[-1], y_data[0], y_data[-1]], aspect='auto')
+
+        ax.set_ylabel(self.dims[0].label)
+        ax.set_xlabel(self.dims[1].label)
+        ax.set_title('Signal Data as Image')
+
+        plt.colorbar(img, ax=ax, label=self.amplitude.label)
+
+        return ax, img
                 
     @property
     def ndim(self):
