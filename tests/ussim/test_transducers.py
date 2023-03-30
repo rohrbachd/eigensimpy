@@ -320,3 +320,7 @@ class TestReceiver(unittest.TestCase):
         receiver.record_signal(5.5, field)
         expected_signal_data[7] = 1.5 * 3
         np.testing.assert_equal(receiver.signal.data, expected_signal_data)        
+        
+
+if __name__ == "__main__":
+    unittest.main()

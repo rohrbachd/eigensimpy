@@ -80,7 +80,7 @@ class Signal:
         y_data = self.dims[0].dim_vector(self.data.shape[0])
         x_data = self.dims[1].dim_vector(self.data.shape[1])
 
-        img = ax.imshow(self.data, origin='lower', extent=[x_data[0], x_data[-1], y_data[0], y_data[-1]], aspect='auto')
+        img = ax.imshow(self.data, origin='lower', extent=[x_data[0], x_data[-1], y_data[-1], y_data[0]], aspect='auto')
 
         ax.set_ylabel(self.dims[0].label)
         ax.set_xlabel(self.dims[1].label)

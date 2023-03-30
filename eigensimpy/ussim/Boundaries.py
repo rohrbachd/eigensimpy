@@ -1,5 +1,25 @@
-from typing import Optional
+from typing import Optional, List
 import numpy as np
+
+#   field:
+#
+#    [ - - -  .. - *************************************** - .. - - - ]
+#    [ - - -  .. - *************************************** - .. - - - ]
+#                       :
+#    [ - - -  .. - *************************************** - .. - - - ]
+#    [ o o o  .. o xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx o .. o o o ]
+#    [ o o o  .. o xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx o .. o o o ]
+#                       :
+#    [ o o o  .. o xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx o .. o o o ]   
+#    [ o o o  .. o xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx o .. o o o ]
+#    [ - - -  .. - *************************************** - .. - - - ]
+#    [ - - -  .. - *************************************** - .. - - - ]
+#                       :
+#    [ - - -  .. - *************************************** - .. - - - ]
+#
+#
+#  Wheere o and * are pml layers and x is data. *** = pml_d1 and ooo is pml_d2
+#  -- is where pmld1 and pml2 overlap
 
 class PMLSettings:
     def __init__(self, **kwargs):
@@ -33,6 +53,7 @@ class SimplePML:
         return SimplePML(maxial_settings)
 
     def apply_pml(self, field: np.ndarray, is_stag: Optional[List[bool]] = None):
+        
         if is_stag is None:
             is_stag = []
 
@@ -58,11 +79,43 @@ class SimplePML:
 
         return field
     
-    def apply_pml_d1(self, field, is_stag=None):
-        pass  # Implement this method based on the given Matlab code
+    def apply_pml_d1(self, field, is_stag:bool):
+        
+        nd = len(field.shape)
 
-    def apply_pml_d2(self, field, is_stag=None):
-        pass  # Implement this method based on the given Matlab code
+        pml_origin = self.pml_origin_cache
+        pml_stg = self.pml_staggered_cache
+
+        N = len(pml_origin)
+
+        self._must_be_2D(nd)
+
+        if is_stag[0]:
+            field = apply_pml_d1_helper(field, pml_stg, N)
+        else:
+            field = apply_pml_d1_helper(field, pml_origin, N)
+
+        return field
+    
+    
+    def apply_pml_d2(self, field, is_stag:bool):
+        
+        nd = len(field.shape)
+        is_stag = self._validate_stag(is_stag, nd)
+
+        pml_origin = self.pml_origin_cache
+        pml_stg = self.pml_staggered_cache
+
+        N = len(pml_origin)
+
+        self._must_be_2D(nd)
+
+        if is_stag[1]:
+            field = apply_pml_d2_helper(field, pml_stg, N)
+        else:
+            field = apply_pml_d2_helper(field, pml_origin, N)
+
+        return field
 
     def _must_be_2D(self, nd):
         if nd != 2:
@@ -101,11 +154,37 @@ class SimplePML:
         return pml
     
 def apply_pml_d1_helper(field, pml, N):
-    field[-N:, :] *= pml[::-1, None]
-    field[:N, :] *= pml[None, :]
+    """Apply PML in the first dimension of the field.
+    
+    Args:
+        field (numpy.ndarray): The field to which the PML will be applied.
+        pml (numpy.ndarray): The 1-dimensional PML array.
+        N (int): The number of elements in the PML array.
+
+    Returns:
+        numpy.ndarray: The field after applying the PML in the first dimension.
+    """
+    
+    # from -N to END of field in 1st dimension  
+    field[-N:, :] *= pml[:, None]
+    # from 0 to N of field in 1st dimension  
+    field[:N, :] *= pml[::-1, None]
     return field
 
 def apply_pml_d2_helper(field, pml, N):
+    """Apply PML in the second dimension of the field.
+    
+    Args:
+        field (numpy.ndarray): The field to which the PML will be applied.
+        pml (numpy.ndarray): The 1-dimensional PML array.
+        N (int): The number of elements in the PML array.
+
+    Returns:
+        numpy.ndarray: The field after applying the PML in the second dimension.
+    """
+    
+    # from -N to END of field in the 2nd dimension  
     field[:, -N:] *= pml[None, :]
-    field[:, :N] *= pml[::-1, None]
+    # from 0 to N of field in the 2nd dimension      
+    field[:, :N] *= pml[None, ::-1]
     return field

@@ -75,3 +75,7 @@ class TestRecorderSet(unittest.TestCase):
         self.assertTrue(all(success))
 
         self.assertEqual(len(recorder2.get_messages()), 2)
+        
+
+if __name__ == "__main__":
+    unittest.main()

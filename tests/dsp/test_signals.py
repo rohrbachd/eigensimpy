@@ -102,7 +102,7 @@ class SignalTests(unittest.TestCase):
         self.assertTrue( np.allclose( self.signal.data, img.get_array()) )  
         
         # Test with an existing Axes object
-        fig, ax2 = plt.subplots()
+        _, ax2 = plt.subplots()
         ax2, img2 = self.signal.imshow(ax=ax2)
 
         self.assertEqual(ax2.get_title(), 'Signal Data as Image')
@@ -112,16 +112,18 @@ class SignalTests(unittest.TestCase):
             
     def test_plot(self):
         # Test with a new figure
-        ax = self.signal.plot()
+        ax, lines = self.signal.plot()
 
+        self.assertEqual( len(lines), 4)
         self.assertEqual(ax.get_title(), 'Signal Data')
         self.assertEqual(ax.get_xlabel(), self.signal.dims[0].label)
         self.assertEqual(ax.get_ylabel(), self.signal.amplitude.label)
 
         # Test with an existing Axes object
         fig, ax2 = plt.subplots()
-        ax2 = self.signal.plot(ax=ax2)
+        ax2, lines2 = self.signal.plot(ax=ax2)
 
+        self.assertEqual( len(lines2), 4)
         self.assertEqual(ax2.get_title(), 'Signal Data')
         self.assertEqual(ax2.get_xlabel(), self.signal.dims[0].label)
         self.assertEqual(ax2.get_ylabel(), self.signal.amplitude.label)

@@ -52,3 +52,6 @@ class TestViscous(unittest.TestCase):
         self.assertEqual(viscous.density, 1000 * unit.kilogram / unit.meter**3)
         self.assertEqual(viscous.comp_atten, unit.Quantity(0.5, unit.neper))
         self.assertEqual(viscous.shear_atten, unit.Quantity(1, unit.neper))
+        
+if __name__ == "__main__":
+    unittest.main()

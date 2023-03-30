@@ -14,5 +14,9 @@ class SignalFactoryTests(unittest.TestCase):
         pf = PulseFactory();
         signal = pf.calc_pulse('simple1') 
         
-        ax = signal.plot()
+        ax, _ = signal.plot()
         self.assertEqual(ax.get_title(), 'Signal Data')
+        
+
+if __name__ == "__main__":
+    unittest.main()

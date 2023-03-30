@@ -104,3 +104,7 @@ class TestIsotropicAcousticMedia(unittest.TestCase):
     # def test_invalid_input(self):
     #     with self.assertRaises(TypeError):
     #         IsotropicAcousticMedia(comp_sos="invalid", shear_sos=1000, density=1000, comp_atten=0.5, shear_atten=0.3)
+
+
+if __name__ == "__main__":
+    unittest.main()
