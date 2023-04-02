@@ -1,9 +1,61 @@
 import unittest
 
 # Import square function
-from eigensimpy.ussim.Transducers import Emitter, Receiver, EmitterSet2D, ReceiverSet2D
+from eigensimpy.ussim.Transducers import Emitter, Receiver, EmitterSet2D, ReceiverSet2D, LinearArray
 from eigensimpy.dsp.Signals import Signal, Dimension, DimensionArray, Quantity
 import numpy as np
+
+
+class TestLinearArray(unittest.TestCase):
+
+    def test_create_emitters(self):
+        # Create a signal for the LinearArray
+        dims = [Dimension(quantity=Quantity(name="time", si_unit="s"), delta=0.1, offset=1.4)]
+        data = np.ones(10)
+        sig = Signal(data=data, dims=dims)
+
+        # Create a LinearArray
+        linear_array = LinearArray(element_width=0.5,
+                                   element_height=0.5,
+                                   number_elements=3,
+                                   pitch=0.6,
+                                   kerf=0.1,
+                                   unit="mm",
+                                   position=[0, 0, 0],
+                                   emitted_signal=sig,
+                                   use_shear_wave=False)
+
+        # Create dimensions for create_emitters function
+        dim_z = Dimension(quantity=Quantity(name="depth", si_unit="mm"), delta=0.1, offset=0)
+        dim_x = Dimension(quantity=Quantity(name="width", si_unit="mm"), delta=0.1, offset=0)
+        dimension = [dim_z, dim_x]
+
+        # Call create_emitters function
+        emitters = linear_array.create_emitters(dimension)
+
+        # Validate the result
+        self.assertEquals(emitters.num_emitters, 6)  # 3 for emitter_stress11 and 3 for emitter_stress22
+        self.assertEquals(len(emitters.emitters), 6)
+
+        # Validate position of the emitters
+        for i in range(3):
+            emitter_stress11 = emitters.emitters[i]
+            emitter_stress22 = emitters.emitters[i + 3]
+
+            # Check if the position of the emitter_stress11 and emitter_stress22 are the same
+            np.testing.assert_array_equal(emitter_stress11.position, emitter_stress22.position)
+
+            # Check if the position of the emitter is correct
+            expected_position_x = linear_array.position[0] + (linear_array.element_width + linear_array.kerf) * i
+            expected_position_z = linear_array.position[2]
+            expected_position = np.array([[expected_position_z, expected_position_x]])
+
+            np.testing.assert_array_almost_equal(emitter_stress11.position[:, :2], expected_position, decimal=1)
+            np.testing.assert_array_almost_equal(emitter_stress22.position[:, :2], expected_position, decimal=1)
+
+        # Validate the emitted_signal of the emitters
+        for emitter in emitters.emitters:
+            self.assertEqual(emitter.signal, sig)
 
 class TestReceiverSet2D(unittest.TestCase):
     
@@ -211,6 +263,29 @@ class TestEmitterSet2D(unittest.TestCase):
             ]
         ))
         
+    def test_emitter_validation_array(self):
+        
+        # Create three emitters with the same signal dimensions
+        dims = [Dimension(quantity=Quantity(name="time", si_unit="s"), delta=0.1, offset=1.4)]
+        data = np.ones(10)
+        sig = Signal(data=data, dims=dims)
+        
+        # all have the same signal 
+        e1 = Emitter(position=np.array([[0, 0], [0, 1]]), signal=sig)
+        e2 = Emitter(position=np.array([[1, 0], [1, 1]]), signal=sig)
+        e3 = Emitter(position=np.array([[2, 0], [2, 1]]), signal=sig)
+        e4 = Emitter(position=np.array([[3, 0], [3, 1]]), signal=sig)
+        
+        # Create emitter set with arrays of emitters
+        es = EmitterSet2D(emitter_vel1=[e1, e2], emitter_vel2=[e3, e4])
+        
+        # Validate emitters, should pass
+        self.assertEquals( es.num_emitters, 4);
+        self.assertEquals( len(es.emitters), 4);
+        self.assertEquals( es.delta, 0.1);
+        self.assertEquals( es.offset, 1.4);
+        self.assertEquals( es.time_unit, "s");
+                
 class TestEmitter(unittest.TestCase):
 
         

@@ -1,11 +1,14 @@
 
 
 from eigensimpy.ussim.Media import IsotropicElasticMedia
-from eigensimpy.ussim.Recorders import RecorderSet2D
+from eigensimpy.ussim.Recorders import RecorderSet
 from eigensimpy.ussim.Boundaries import SimplePML
 from eigensimpy.ussim.Transducers import ReceiverSet2D, EmitterSet2D
-
+from eigensimpy.ussim.Fields import AcousticField2D
+from eigensimpy.simmath.MathUtil import interp2
 from eigensimpy.simmath.Derivatives import FirstOrderForward, FirstOrderBackward, MixedModel
+
+import numpy as np
 
 class SimSettings:
     def __init__(self, **kwargs):
@@ -17,10 +20,11 @@ class VirieuxDerivViscous2D:
     def __init__(self, **kwargs):
         self.media: IsotropicElasticMedia = kwargs.get('media', None)
         self.emitter: EmitterSet2D = kwargs.get('emitter', None)
-        self.settings: SimSettings = kwargs.get('settings', None)
-        self.recorder: RecorderSet2D = kwargs.get('recorder', None)
-        self.pml: SimplePML = kwargs.get('pml', SimplePML())
         self.receiver: ReceiverSet2D = kwargs.get('receiver', None)
+        self.settings: SimSettings = kwargs.get('settings', None)
+        self.recorder: RecorderSet = kwargs.get('recorder', None)
+        self.pml: SimplePML = kwargs.get('pml', SimplePML())
+        
 
         self.dx1_fwrd: FirstOrderForward = FirstOrderForward(1)
         self.dx1_bwrd: FirstOrderBackward = FirstOrderBackward(1)
@@ -34,94 +38,242 @@ class VirieuxDerivViscous2D:
         self.dx2dt_fwrd: MixedModel = MixedModel(self.dx2_fwrd, FirstOrderForward(3))
         self.dx2dt_bwrd: MixedModel = MixedModel(self.dx2_bwrd, FirstOrderForward(3))
         
-    def runSimulation(self):
+    def run_simulation(self):
         
-        lambda = self.media.comp_modulus.data
+        lamb = self.media.comp_modulus.data
         mu = self.media.shear_modulus.data 
-        
         dens   = self.media.density.data
 
         eta = self.media.eta_atten.data;
         chi = self.media.chi_atten.data;
 
-        field = ussim.fields.AcousticField2D(size(mu), self.media.ShearModulus.Dimensions);
+        field = AcousticField2D( mu.shape, self.media.shear_modulus.dimensions);
 
-        duration = self.Settings.Duration;
-        dt = self.Emitter.Delta;
+        duration = self.settings.duration;
+        dt = self.emitter.delta;
 
-        nSimSteps = round( duration ./ dt ); 
+        n_sim_steps  = np.round_( duration / dt ); 
 
-        time = ( 0:nSimSteps-1 ) .* dt;
+        time = np.arange(n_sim_steps ) * dt
 
-        # % we assume that delta 1 and delta 2 are the same
-        # deltaSpace = self.media.ShearModulus.Dimensions(1).Delta;
+        # we assume that delta 1 and delta 2 are the same
+        delta_space  = self.media.shear_modulus.dimensions[1].delta;
         
-        # [B, Bi]   = computeBuoyancy(dens, dt, deltaSpace);
-        # [ L2M, L] = computeLMdim2( lambda, mu, dt, deltaSpace);
-        # Md1 = computeMdim1( mu, dt, deltaSpace );
+        B, Bi  = self.compute_buoyancy(dens, dt, delta_space);
+        L2M, L = self.compute_lm_dim2( lamb, mu, dt, delta_space);
+        Md1 = self.compute_m_dim1( mu, dt, delta_space );
 
+        X2E, X = self.compute_xe_dim2( chi, eta, delta_space);
+        E = self.compute_e_dim1( eta, delta_space );
 
-        # [ X2E, X] = computeXEdim2( chi, eta, deltaSpace);
-        # E = computeEd im1( eta, deltaSpace );
+        Bidtdx = Bi / dt / delta_space; # deltaSpace is squared since Bi = 1/dens/dx
+        Bdtdx = B / dt / delta_space; # deltaSpace is squared since Bi = 1/dens/dx
+            
+        # get the raw data it should be faster to work with the raw
+        # data directly
+        vel1 = field.vel1.data;
+        vel2 = field.vel2.data;
 
+        stress11 = field.stress11.data;
+        stress22 = field.stress22.data;
+        stress12 = field.stress12.data;
 
-        # % get the raw data it should be faster to work with the raw
-        # % data directly
-        # vel1 = field.Vel1.Data;
-        # vel2 = field.Vel2.Data;
-
-        # vel1 = cat(3,vel1,vel1);
-        # vel2 = cat(3,vel2,vel2);
-
-        # stress11 = field.Stress11.Data;
-        # stress22 = field.Stress22.Data;
-        # stress12 = field.Stress12.Data;
-
-        # recorder = self.Recorder;
-        # recorder.initialize(field);
-
-        # receiver = self.Receiver;
+        recorder = self.recorder;
+        recorder.initialize(field);
+        
+        receiver = self.receiver;
     
-        # pml = self.Pml;
-
         # % si == sample index
-        # for si = 1:nSimSteps
+        for si in range(n_sim_steps):
                 
-        #     ti = time(si);
-        #     vel1(:,:,2) = self.Emitter.emittVel1(ti, vel1(:,:,2));
-        #     vel2(:,:,2) = self.Emitter.emittVel2(ti, vel2(:,:,2));
+            ti = time(si);
+            vel1 = self.emitter.emit_vel1(ti, vel1);
+            vel2 = self.emitter.emit_vel2(ti, vel2);
             
-        #     % first dimension z, or y commonly
-        #     vel1 = self.computeVel1(vel1, stress11 , stress12, Bi);
-        #     vel2 = self.computeVel2(vel2, stress22, stress12, B );
+            # first dimension z, or y commonly
+            # Compute velocity and stress derivatives
+            vel1, ds11d1, ds12d2 = self.compute_vel1(vel1, stress11, stress12, Bi)
+            vel2, ds22d2, ds12d1 = self.compute_vel2(vel2, stress22, stress12, B)
 
-        #     vel1(:,:,2) = pml.applyPml( vel1(:,:,2), [true true]); % vel1 is staggered in d1 and d2 
-        #     vel2(:,:,2) = pml.applyPml( vel2(:,:,2), [false false]); % vel2 is not staggered 
+            vel1 = self.pml.apply_pml( vel1, [True, True] ) # vel1 is staggered in d1 and d2 
+            vel2 = self.pml.apply_pml( vel2, [False, False]) # vel2 is not staggered 
             
-        #     recorder.RecorderVel1.recordField(vel1(:,:,2));
-        #     recorder.RecorderVel2.recordField(vel2(:,:,2));
+            ddv1dtd1 = self.dx1_bwrd.compute(ds11d1 + ds12d2) * Bidtdx
+            ddv2dtd2 = self.dx2_fwrd.compute(ds22d2 + ds12d1) * Bdtdx
+            ddv1dtd2 = self.dx2_bwrd.compute(ds11d1 + ds12d2) * Bidtdx
+            ddv2dtd1 = self.dx1_fwrd.compute(ds22d2 + ds12d1) * Bdtdx
+
+            recorder.recorder_vel1.record_field(vel1)
+            recorder.recorder_vel2.record_field(vel2)
+
+            receiver.receive_vel1(ti, vel1)
+            receiver.receive_vel2(ti, vel2)
+
+            stress11 = self.emitter.emit_stress11(ti, stress11)
+            stress22 = self.emitter.emit_stress22(ti, stress22)
+            stress12 = self.emitter.emit_stress12(ti, stress12)
             
-        #     receiver.receiveVel1(ti, vel1(:,:,2));
-        #     receiver.receiveVel2(ti, vel2(:,:,2));
+            stress11 = self.compute_stress11(stress11, ddv2dtd2, ddv1dtd1, L2M, L, X2E, X, vel1, vel2)
+            stress22 = self.compute_stress22(stress22, ddv2dtd2, ddv1dtd1, L2M, L, X2E, X, vel1, vel2)
+            stress12 = self.compute_stress12(stress12, ddv2dtd1, ddv1dtd2, Md1, E, vel1, vel2)
 
-        #     stress11 = self.Emitter.emittStress11(ti, stress11);
-        #     stress22 = self.Emitter.emittStress22(ti, stress22);
-        #     stress12 = self.Emitter.emittStress12(ti, stress12);
+            recorder.recorder_stress11.record_field(stress11)
+            recorder.recorder_stress22.record_field(stress22)
+            recorder.recorder_stress12.record_field(stress12)
 
-        #     stress11 = self.computeStress11(stress11, vel1, vel2, L2M, L, X2E, X);
-        #     stress22 = self.computeStress22(stress22, vel1, vel2, L2M, L, X2E, X);
-        #     stress12 = self.computeStress12(stress12, vel1, vel2, Md1, E);
-
-        #     stress11 = pml.applyPml( stress11, [false true]); % vel2 is not staggered 
-        #     stress22 = pml.applyPml( stress22, [true false]); % vel2 is not staggered 
-        #     stress12 = pml.applyPml( stress12, [true false]); % vel2 is not staggered 
-
-        #     recorder.RecorderStress11.recordField(stress11);
-        #     recorder.RecorderStress11.recordField(stress22);
-        #     recorder.RecorderStress11.recordField(stress12);
+            receiver.receive_stress11(ti, stress11)
+            receiver.receive_stress22(ti, stress22)
+            receiver.receive_stress12(ti, stress12)
             
-        #     receiver.receiveStress11(ti, stress11);
-        #     receiver.receiveStress22(ti, stress22);
-        #     receiver.receiveStress12(ti, stress12);
+
             
-       
+    def compute_vel1(self, vel1, stress11, stress12, Bi):
+        
+        ds11d1 = self.dx1_fwrd.compute(stress11)
+        ds12d2 = self.dx2_fwrd.compute(stress12)
+
+        vel1 = self.pml.apply_pml(vel1)
+
+        vel1 = vel1 + Bi * ds11d1 + Bi * ds12d2
+
+        velres = self.pml.apply_pml(vel1)
+
+        return velres, ds11d1, ds12d2
+    
+    def compute_vel2(self, vel2, stress22, stress12, B):
+        
+        pml = self.pml
+
+        ds22d2 = self.dx2_bwrd.compute(stress22)
+        ds12d1 = self.dx1_bwrd.compute(stress12)
+
+        vel2 = pml.apply_pml(vel2)
+
+        vel2 = vel2 + B * ds22d2 + B * ds12d1
+
+        velres = pml.apply_pml(vel2)
+
+        return velres, ds22d2, ds12d1
+    
+    def compute_stress11(self, stress11, dduydydt, dduxdxdt, L2M, L, X2E, X, vel1, vel2):
+        
+        pml = self.pml
+
+        stress11 = pml.apply_pml(stress11)
+
+        stress11 = stress11 + L2M * self.dx1_bwrd.compute(vel1) \
+                            + X2E * dduxdxdt \
+                            + L * self.dx2_fwrd.compute(vel2) \
+                            + X * dduydydt
+
+        stress11 = pml.apply_pml(stress11)
+
+        return stress11
+    
+    def compute_stress22(self, stress22, dduydydt, dduxdxdt, L2M, L, X2E, X, vel1, vel2):
+        pml = self.pml
+
+        stress22 = pml.apply_pml(stress22)
+
+        stress22 = stress22 + L * self.dx1_bwrd.compute(vel1) \
+                            + X * dduxdxdt \
+                            + L2M * self.dx2_fwrd.compute(vel2) \
+                            + X2E * dduydydt
+
+        stress22 = pml.apply_pml(stress22)
+
+        return stress22
+    
+    def compute_stress12(self, stress12, dduydxdt, dduxdydt, M, E, vel1, vel2):
+        pml = self.pml
+
+        stress12 = pml.apply_pml(stress12)
+
+        stress12 = stress12 + M * self.dx1_fwrd.compute(vel2) \
+                            + E * dduydxdt \
+                            + M * self.dx2_bwrd.compute(vel1) \
+                            + E * dduxdydt
+
+        stress12 = pml.apply_pml(stress12)
+
+        return stress12
+    
+    
+    def compute_xe_dim2(self, chi, eta, dt):
+        x2e = chi + 2 * eta
+
+        xq, yq = np.meshgrid(np.arange(1.5, x2e.shape[1] + 1.5), np.arange(1, x2e.shape[0] + 1))
+
+        X2E = interp2(x2e, xq, yq)
+
+        x2e_nan = np.isnan(X2E)
+        X2E[x2e_nan] = x2e[x2e_nan]
+
+        xq, yq = np.meshgrid(np.arange(1.5, chi.shape[1] + 1.5), np.arange(1, chi.shape[0] + 1))
+
+        X = interp2(chi, xq, yq)
+        x_nan = np.isnan(X)
+        X[x_nan] = chi[x_nan]
+
+        X2E = X2E * dt
+        X = X * dt
+
+        return X2E, X
+
+
+    def compute_e_dim1(self, eta, dt):
+        xq, yq = np.meshgrid(np.arange(1, eta.shape[1] + 1), np.arange(1.5, eta.shape[0] + 1.5))
+
+        Ed1 = interp2(eta, xq, yq)
+
+        e_nan = np.isnan(Ed1)
+        Ed1[e_nan] = eta[e_nan]
+
+        Ed1 = Ed1 * dt
+
+        return Ed1
+    
+    def compute_lm_dim2(self, lambda_, mu, dt, delta_space):
+        l2m = lambda_ + 2 * mu
+
+        xq, yq = np.meshgrid(np.arange(1.5, l2m.shape[1] + 1.5), np.arange(1, l2m.shape[0] + 1))
+
+        L2M = interp2(l2m, xq, yq)
+
+        l2m_nan = np.isnan(L2M)
+        L2M[l2m_nan] = l2m[l2m_nan]
+        L2M = L2M * dt / delta_space
+
+        xq, yq = np.meshgrid(np.arange(1.5, lambda_.shape[1] + 1.5), np.arange(1, lambda_.shape[0] + 1))
+
+        L = interp2(lambda_, xq, yq)
+
+        l_nan = np.isnan(L)
+        L[l_nan] = lambda_[l_nan]
+        L = L * dt / delta_space
+
+        return L2M, L
+
+    def compute_m_dim1(self, mu, dt, delta_space):
+        xq, yq = np.meshgrid(np.arange(1, mu.shape[1] + 1), np.arange(1.5, mu.shape[0] + 1.5))
+
+        Md1 = interp2(mu, xq, yq)
+
+        m_nan = np.isnan(Md1)
+        Md1[m_nan] = mu[m_nan]
+
+        Md1 = Md1 * dt / delta_space
+
+        return Md1
+
+    def compute_buoyancy(self, dens, dt, delta_space):
+        B = (1 / dens) * dt / delta_space
+
+        xq, yq = np.meshgrid(np.arange(1.5, B.shape[1] + 1.5), np.arange(1.5, B.shape[0] + 1.5))
+
+        Bi = interp2(B, xq, yq)
+
+        bi_nan = np.isnan(Bi)
+        Bi[bi_nan] = 0 #B[bi_nan]
+
+        return B, Bi
