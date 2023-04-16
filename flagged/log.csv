@@ -1,0 +1,5 @@
+Enter your text,output,flag,username,timestamp
+test,"'
+What method was used to assess the accuracy of the two classifiers?
+
+A n-fold cross-validation was used to assess the accuracy of the two classifiers. Stratified n-fold cross-validation with n equal to the sample number was used, which is equal to a leave-one-out cross-validation (LOOCV).",,,2023-04-05 06:53:07.196697

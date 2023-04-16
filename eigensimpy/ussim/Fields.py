@@ -7,8 +7,8 @@ class AcousticField2D:
     
     def __init__(self, **kwargs) -> None:
         
-        size = kwargs.get('field_size', 0)
-        dimensions : DimensionArray = kwargs.get('dimensions', 0)
+        size = kwargs.get('field_size', [])
+        dimensions : DimensionArray = kwargs.get('dims', [])
         
         self._initField(size, dimensions)
         
@@ -17,7 +17,7 @@ class AcousticField2D:
         
         data = np.zeros(size)
         
-        self.vel1 = Signal(data = data.copy(),dims =  dimensions )
+        self.vel1 = Signal(data = data.copy(),dims = dimensions )
         self.vel2 = Signal(data = data.copy(),dims =  dimensions )
         self.stress11 = Signal(data = data.copy(),dims =  dimensions )
         self.stress22 = Signal(data = data.copy(),dims =  dimensions )

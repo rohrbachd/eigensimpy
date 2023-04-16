@@ -14,6 +14,12 @@ class TestLinearArray(unittest.TestCase):
         data = np.ones(10)
         sig = Signal(data=data, dims=dims)
 
+        #   0  .1  .2  .3  .4  .5  .6  .7  .8  .9  1.0 1.1 1.2 1.3 1.4 1.5 1.6 
+        # [**][**][--][**][**][  ][**][**][--][**][**][  ][**][**][--][**][**]    
+        # |      Em1         |    |      Em2         |    |      Em3         |
+        #         :                        :         :    :
+        #         :------------------------:         :----:
+        #                    Pitch                     kerf
         # Create a LinearArray
         linear_array = LinearArray(element_width=0.5,
                                    element_height=0.5,
@@ -37,6 +43,28 @@ class TestLinearArray(unittest.TestCase):
         self.assertEquals(emitters.num_emitters, 6)  # 3 for emitter_stress11 and 3 for emitter_stress22
         self.assertEquals(len(emitters.emitters), 6)
 
+        expected_position0 = np.array([ [0, 0, 0],
+                                        [0, 1, 0],
+                                        [0, 2, 0],
+                                        [0, 3, 0],
+                                        [0, 4, 0]])
+        
+        expected_position1 = np.array([ [0, 6, 0],
+                                        [0, 7, 0],
+                                        [0, 8, 0],
+                                        [0, 9, 0],
+                                        [0, 10, 0]])
+        
+        expected_position2 = np.array([ [0, 12, 0],
+                                        [0, 13, 0],
+                                        [0, 14, 0],
+                                        [0, 15, 0],
+                                        [0, 16, 0]])
+        
+        expected_position =  [expected_position0,
+                              expected_position1,
+                              expected_position2]
+        
         # Validate position of the emitters
         for i in range(3):
             emitter_stress11 = emitters.emitters[i]
@@ -44,18 +72,16 @@ class TestLinearArray(unittest.TestCase):
 
             # Check if the position of the emitter_stress11 and emitter_stress22 are the same
             np.testing.assert_array_equal(emitter_stress11.position, emitter_stress22.position)
+            np.testing.assert_array_equal(emitters.emitter_stress11[i].position, emitter_stress11.position)
 
-            # Check if the position of the emitter is correct
-            expected_position_x = linear_array.position[0] + (linear_array.element_width + linear_array.kerf) * i
-            expected_position_z = linear_array.position[2]
-            expected_position = np.array([[expected_position_z, expected_position_x]])
-
-            np.testing.assert_array_almost_equal(emitter_stress11.position[:, :2], expected_position, decimal=1)
-            np.testing.assert_array_almost_equal(emitter_stress22.position[:, :2], expected_position, decimal=1)
+            np.testing.assert_array_almost_equal(emitter_stress11.position, expected_position[i], decimal=1)
+            np.testing.assert_array_almost_equal(emitter_stress22.position, expected_position[i], decimal=1)
 
         # Validate the emitted_signal of the emitters
         for emitter in emitters.emitters:
-            self.assertEqual(emitter.signal, sig)
+            self.assertEqual(emitter.signal.dims, sig.dims)
+            self.assertEqual(emitter.signal.amplitude, sig.amplitude)
+            np.testing.assert_array_almost_equal(emitter.signal.data, sig.data)
 
 class TestReceiverSet2D(unittest.TestCase):
     

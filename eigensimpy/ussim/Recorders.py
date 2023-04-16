@@ -12,7 +12,48 @@ class AFieldRecorder(ABC):
         pass
 
 
-class RecorderSet:
+class RecorderSet2D:
+
+    def __init__(self, **kwargs):
+        self.recorder_vel1: RecorderList = self._ensure_list(kwargs.pop('recorder_vel1', []))
+        self.recorder_vel2: RecorderList = self._ensure_list(kwargs.pop('recorder_vel2', []))
+        self.recorder_stress11: RecorderList = self._ensure_list(kwargs.pop('recorder_stress11', []))
+        self.recorder_stress22: RecorderList = self._ensure_list(kwargs.pop('recorder_stress22', []))
+        self.recorder_stress12: RecorderList = self._ensure_list(kwargs.pop('recorder_stress12', []))
+
+    @staticmethod
+    def _ensure_list(item):
+        if isinstance(item, AFieldRecorder):
+            return RecorderList([item])
+        elif isinstance(item, list):
+            return RecorderList(item)
+        elif isinstance(item, RecorderList):
+            return item
+        else:
+            raise ValueError("Expecting an AFieldRecorder instance or a list of AFieldRecorder instances")
+
+    def initialize(self, field):
+        success = []
+        for recorder_list in [self.recorder_vel1, self.recorder_vel2, self.recorder_stress11, self.recorder_stress22, self.recorder_stress12]:
+            success.append(recorder_list.initialize(field))
+        return success
+    
+    def record_vel1(self, field):
+        self.recorder_vel1.record(field)
+
+    def record_vel2(self, field):
+        self.recorder_vel2.record(field)
+
+    def record_stress11(self, field):
+        self.recorder_stress11.record(field)
+
+    def record_stress22(self, field):
+        self.recorder_stress22.record(field)
+
+    def record_stress12(self, field):
+        self.recorder_stress12.record(field)
+            
+class RecorderList:
 
     def __init__(self, recorders=None):
         
@@ -80,6 +121,7 @@ class FieldDisplay2D(AFieldRecorder):
         self.fig = kwargs.get('data', None)
         self.axes = kwargs.get('axes', None)
         self.cLim = kwargs.get('cLim', None)
+        self.name = kwargs.get('name', None)
         self.img = None
 
     def get_displayed_data(self):

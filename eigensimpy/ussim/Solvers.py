@@ -1,12 +1,12 @@
 
 
 from eigensimpy.ussim.Media import IsotropicElasticMedia
-from eigensimpy.ussim.Recorders import RecorderSet
+from eigensimpy.ussim.Recorders import RecorderSet2D
 from eigensimpy.ussim.Boundaries import SimplePML
 from eigensimpy.ussim.Transducers import ReceiverSet2D, EmitterSet2D
 from eigensimpy.ussim.Fields import AcousticField2D
 from eigensimpy.simmath.MathUtil import interp2
-from eigensimpy.simmath.Derivatives import FirstOrderForward, FirstOrderBackward, MixedModel
+from eigensimpy.simmath.Derivatives import FirstOrderForward, FirstOrderBackward, MixedModelDerivative
 
 import numpy as np
 
@@ -22,8 +22,8 @@ class VirieuxDerivViscous2D:
         self.emitter: EmitterSet2D = kwargs.get('emitter', None)
         self.receiver: ReceiverSet2D = kwargs.get('receiver', None)
         self.settings: SimSettings = kwargs.get('settings', None)
-        self.recorder: RecorderSet = kwargs.get('recorder', None)
-        self.pml: SimplePML = kwargs.get('pml', SimplePML())
+        self.recorder: RecorderSet2D = kwargs.get('recorder', None)
+        self.pml: SimplePML = kwargs.get('pml', None)
         
 
         self.dx1_fwrd: FirstOrderForward = FirstOrderForward(1)
@@ -32,11 +32,11 @@ class VirieuxDerivViscous2D:
         self.dx2_fwrd: FirstOrderForward = FirstOrderForward(2)
         self.dx2_bwrd: FirstOrderBackward = FirstOrderBackward(2)
 
-        self.dx1dt_fwrd: MixedModel = MixedModel(self.dx1_fwrd, FirstOrderForward(3))
-        self.dx1dt_bwrd: MixedModel = MixedModel(self.dx1_bwrd, FirstOrderForward(3))
+        self.dx1dt_fwrd: MixedModelDerivative = MixedModelDerivative(self.dx1_fwrd, FirstOrderForward(3))
+        self.dx1dt_bwrd: MixedModelDerivative = MixedModelDerivative(self.dx1_bwrd, FirstOrderForward(3))
 
-        self.dx2dt_fwrd: MixedModel = MixedModel(self.dx2_fwrd, FirstOrderForward(3))
-        self.dx2dt_bwrd: MixedModel = MixedModel(self.dx2_bwrd, FirstOrderForward(3))
+        self.dx2dt_fwrd: MixedModelDerivative = MixedModelDerivative(self.dx2_fwrd, FirstOrderForward(3))
+        self.dx2dt_bwrd: MixedModelDerivative = MixedModelDerivative(self.dx2_bwrd, FirstOrderForward(3))
         
     def run_simulation(self):
         
@@ -44,51 +44,51 @@ class VirieuxDerivViscous2D:
         mu = self.media.shear_modulus.data 
         dens   = self.media.density.data
 
-        eta = self.media.eta_atten.data;
-        chi = self.media.chi_atten.data;
+        eta = self.media.eta_atten.data
+        chi = self.media.chi_atten.data
 
-        field = AcousticField2D( mu.shape, self.media.shear_modulus.dimensions);
+        field = AcousticField2D( field_size=mu.shape, dims=self.media.shear_modulus.dims)
 
-        duration = self.settings.duration;
-        dt = self.emitter.delta;
+        duration = self.settings.duration
+        dt = self.emitter.delta
 
-        n_sim_steps  = np.round_( duration / dt ); 
+        n_sim_steps  = np.round_( duration / dt )
 
         time = np.arange(n_sim_steps ) * dt
 
         # we assume that delta 1 and delta 2 are the same
-        delta_space  = self.media.shear_modulus.dimensions[1].delta;
+        delta_space  = self.media.shear_modulus.dims[0].delta
         
-        B, Bi  = self.compute_buoyancy(dens, dt, delta_space);
-        L2M, L = self.compute_lm_dim2( lamb, mu, dt, delta_space);
-        Md1 = self.compute_m_dim1( mu, dt, delta_space );
+        B, Bi  = self.compute_buoyancy(dens, dt, delta_space)
+        L2M, L = self.compute_lm_dim2( lamb, mu, dt, delta_space)
+        Md1 = self.compute_m_dim1( mu, dt, delta_space )
 
-        X2E, X = self.compute_xe_dim2( chi, eta, delta_space);
-        E = self.compute_e_dim1( eta, delta_space );
+        X2E, X = self.compute_xe_dim2( chi, eta, delta_space)
+        E = self.compute_e_dim1( eta, delta_space )
 
-        Bidtdx = Bi / dt / delta_space; # deltaSpace is squared since Bi = 1/dens/dx
-        Bdtdx = B / dt / delta_space; # deltaSpace is squared since Bi = 1/dens/dx
+        Bidtdx = Bi / dt / delta_space # deltaSpace is squared since Bi = 1/dens/dx
+        Bdtdx = B / dt / delta_space # deltaSpace is squared since Bi = 1/dens/dx
             
         # get the raw data it should be faster to work with the raw
         # data directly
-        vel1 = field.vel1.data;
-        vel2 = field.vel2.data;
+        vel1 = field.vel1.data
+        vel2 = field.vel2.data
 
-        stress11 = field.stress11.data;
-        stress22 = field.stress22.data;
-        stress12 = field.stress12.data;
+        stress11 = field.stress11.data
+        stress22 = field.stress22.data
+        stress12 = field.stress12.data
 
-        recorder = self.recorder;
-        recorder.initialize(field);
+        recorder = self.recorder
+        recorder.initialize(vel1)
         
-        receiver = self.receiver;
+        receiver = self.receiver
     
         # % si == sample index
-        for si in range(n_sim_steps):
+        for si in range( int( np.round(n_sim_steps) )):
                 
-            ti = time(si);
-            vel1 = self.emitter.emit_vel1(ti, vel1);
-            vel2 = self.emitter.emit_vel2(ti, vel2);
+            ti = time[si];
+            vel1 = self.emitter.emit_vel1(ti, vel1)
+            vel2 = self.emitter.emit_vel2(ti, vel2)
             
             # first dimension z, or y commonly
             # Compute velocity and stress derivatives
@@ -103,11 +103,11 @@ class VirieuxDerivViscous2D:
             ddv1dtd2 = self.dx2_bwrd.compute(ds11d1 + ds12d2) * Bidtdx
             ddv2dtd1 = self.dx1_fwrd.compute(ds22d2 + ds12d1) * Bdtdx
 
-            recorder.recorder_vel1.record_field(vel1)
-            recorder.recorder_vel2.record_field(vel2)
+            recorder.record_vel1(vel1)
+            recorder.record_vel2(vel2)
 
-            receiver.receive_vel1(ti, vel1)
-            receiver.receive_vel2(ti, vel2)
+            receiver.record_vel1(ti, vel1)
+            receiver.record_vel2(ti, vel2)
 
             stress11 = self.emitter.emit_stress11(ti, stress11)
             stress22 = self.emitter.emit_stress22(ti, stress22)
@@ -117,13 +117,13 @@ class VirieuxDerivViscous2D:
             stress22 = self.compute_stress22(stress22, ddv2dtd2, ddv1dtd1, L2M, L, X2E, X, vel1, vel2)
             stress12 = self.compute_stress12(stress12, ddv2dtd1, ddv1dtd2, Md1, E, vel1, vel2)
 
-            recorder.recorder_stress11.record_field(stress11)
-            recorder.recorder_stress22.record_field(stress22)
-            recorder.recorder_stress12.record_field(stress12)
+            recorder.record_stress11(stress11)
+            recorder.record_stress22(stress22)
+            recorder.record_stress12(stress12)
 
-            receiver.receive_stress11(ti, stress11)
-            receiver.receive_stress22(ti, stress22)
-            receiver.receive_stress12(ti, stress12)
+            receiver.record_stress11(ti, stress11)
+            receiver.record_stress22(ti, stress22)
+            receiver.record_stress12(ti, stress12)
             
 
             

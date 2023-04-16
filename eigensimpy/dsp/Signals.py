@@ -116,16 +116,19 @@ class Signal:
         else:
             return True
         
-    def value_at(self, position_unit, axis=0) -> np.ndarray:
+    def value_at(self, position_unit, axis=0, scip_out_of_bounds=False) -> np.ndarray:
         
         N = self.shape[axis]
         sample_idx = self.dims[axis].to_sample(position_unit)
         
-        if sample_idx < 0:
-            raise ValueError("Start index is out of bounds")
-            
-        if sample_idx >= N:
-            raise ValueError("End index is out of bounds")
+        if not scip_out_of_bounds:
+            if sample_idx < 0:
+                raise ValueError("Start index is out of bounds")
+            if sample_idx >= N:
+                raise ValueError("End index is out of bounds")
+        else:
+            if sample_idx < 0 or sample_idx >= N:
+                return 0 
         # will create ndim slice objects. Each slice object has 3 elements
         # (start, stop, step)        
         slices = [slice(None)] * self.ndim
@@ -135,17 +138,22 @@ class Signal:
         
         return data
         
-    def set_value_at(self, value, position_unit, axis=0) -> None:
+    def set_value_at(self, value, position_unit, axis=0, scip_out_of_bounds=False) -> None:
         
         N = self.shape[axis]
         sample_idx = self.dims[axis].to_sample(position_unit)
         
-        if sample_idx < 0:
-            raise ValueError("Start index is out of bounds")
-            
-        if sample_idx >= N:
-            raise ValueError("End index is out of bounds")
-            
+        if not scip_out_of_bounds:
+            if sample_idx < 0:
+                raise ValueError("Start index is out of bounds")
+                
+            if sample_idx >= N:
+                raise ValueError("End index is out of bounds")
+        else:
+            if sample_idx < 0 or sample_idx >= N:
+                return 
+        
+                   
         # will create ndim slice objects. Each slice object has 3 elements
         # (start, stop, step) 
         slices = [slice(None)] * self.ndim

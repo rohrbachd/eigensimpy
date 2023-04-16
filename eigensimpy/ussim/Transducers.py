@@ -85,14 +85,14 @@ class LinearArray:
         kerf = self.kerf
 
         elemnt_first_pos_x = txdcr_position[x] + (ele_width + kerf) * index
-        elemnt_end_pos_x = elemnt_first_pos_x + ele_width
+        elemnt_end_pos_x = elemnt_first_pos_x + ele_width - delta_x
 
         p1_x = round((elemnt_first_pos_x - offset_x) / delta_x)
         p2_x = round((elemnt_end_pos_x - offset_x) / delta_x)
 
         p_z = round((txdcr_position[z] - offset_z) / delta_z)
 
-        xx, zz, yy = to_vec_coords(range(p1_x, p2_x + 1), p_z, 1)
+        xx, zz, yy = to_vec_coords(range(p1_x, p2_x + 1), p_z, 0)
 
         if len(xx) > 0:
             position = np.array( list(zip(zz, xx, yy)) )
@@ -262,7 +262,7 @@ class EmitterSet2D:
     @staticmethod
     def _emit_list( time: float, emitter_list, field: np.ndarray) -> np.ndarray:
         for emitter in emitter_list:
-            field = emitter.emit_signal(time, field)
+            field = emitter.emitt_signal(time, field)
         return field
     
 class TransducerManager:
@@ -361,15 +361,24 @@ class Emitter:
 
     def emitt_signal(self, time: float, field: np.ndarray) -> np.ndarray:
 
+        shapeField = field.shape
+        nDims = len(shapeField)
+        
         for i in range(self.num_pos):
-            val = self.signal.value_at(time)
+            val = self.signal.value_at(time, scip_out_of_bounds=True)
             pos = tuple(self.position[i, :].astype(int))
 
-            field[pos] = field[pos] + val
+            field[pos[0:nDims]] = field[ pos[0:nDims] ] + val
 
         return field
     
 class Receiver:
+    """
+    The Receiver class represents a receiver that can consist of several elements.
+    The recorded signals at each element will be summed.
+    
+    A Receiver can be initialized using a position and signal argument.
+    """
     
     def __init__(self, **kwargs):
         position : np.ndarray = kwargs.pop('position', None)
@@ -399,14 +408,16 @@ class Receiver:
         self.update_num_pos()
 
     def update_num_pos(self) -> None:
-        self.num_pos = self.position.shape[0]
+        self.num_pos = self.position.shape[1]
 
     def record_signal(self, time: float, field: np.ndarray) -> None:
 
         value = 0;
+        shapeField = field.shape
+        nDims = len(shapeField)
+        
         for i in range(self.num_pos):
+            pos = tuple(self.position[:, i].astype(int))
+            value = value + field[ pos[0:nDims] ]
             
-            pos = tuple(self.position[i, :].astype(int))
-            value = value + field[pos]
-            
-        self.signal.set_value_at( value, time)   
+        self.signal.set_value_at( value, time, scip_out_of_bounds=True)   

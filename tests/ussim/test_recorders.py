@@ -1,7 +1,7 @@
 import unittest
 
 # Import square function
-from eigensimpy.ussim.Recorders import FieldDisplay2D, MessageFieldRecorder, RecorderSet
+from eigensimpy.ussim.Recorders import FieldDisplay2D, MessageFieldRecorder, RecorderList, RecorderSet2D
 import numpy as np
 
 class TestFieldDisplay2D(unittest.TestCase):
@@ -57,14 +57,14 @@ class TestMessageFieldRecorder(unittest.TestCase):
         self.assertEqual(len(recorder.get_messages()), 2)
 
 
-class TestRecorderSet(unittest.TestCase):
+class TestRecorderList(unittest.TestCase):
 
     def test_recorder_set(self):
         field = np.random.rand(5, 5)
         recorder1 = FieldDisplay2D()
         recorder2 = MessageFieldRecorder()
 
-        recorders = RecorderSet([recorder1, recorder2])
+        recorders = RecorderList([recorder1, recorder2])
 
         self.assertEqual(len(recorders), 2)
 
@@ -76,6 +76,47 @@ class TestRecorderSet(unittest.TestCase):
 
         self.assertEqual(len(recorder2.get_messages()), 2)
         
+class TestRecorderSet2D(unittest.TestCase):
 
+    def test_recorder_set2d(self):
+        field = np.random.rand(5, 5)
+        recorder1 = FieldDisplay2D()
+        recorder2 = MessageFieldRecorder()
+        recorder3 = FieldDisplay2D()
+        recorder4 = MessageFieldRecorder()
+
+        recorder_set = RecorderSet2D(recorder_vel1=recorder1,
+                                      recorder_vel2=[recorder2, recorder3],
+                                      recorder_stress11=recorder4)
+
+        # Check if the lists were created correctly
+        self.assertIsInstance(recorder_set.recorder_vel1, RecorderList)
+        self.assertIsInstance(recorder_set.recorder_vel2, RecorderList)
+        self.assertIsInstance(recorder_set.recorder_stress11, RecorderList)
+        self.assertIsInstance(recorder_set.recorder_stress22, RecorderList)
+        self.assertIsInstance(recorder_set.recorder_stress12, RecorderList)
+
+        # Test if recorders were added correctly
+        self.assertEqual(len(recorder_set.recorder_vel1), 1)
+        self.assertEqual(len(recorder_set.recorder_vel2), 2)
+        self.assertEqual(len(recorder_set.recorder_stress11), 1)
+        self.assertEqual(len(recorder_set.recorder_stress22), 0)
+        self.assertEqual(len(recorder_set.recorder_stress12), 0)
+
+        # recorder1.initialize(field)
+        # recorder2.initialize(field)
+        # recorder3.initialize(field)
+        # recorder4.initialize(field)
+        recorder_set.initialize(field);
+        # Test recording
+        recorder_set.record_vel1(field)
+        recorder_set.record_vel2(field)
+        recorder_set.record_stress11(field)
+        recorder_set.record_stress11(field)
+
+        # Test if the MessageFieldRecorder recorded the field
+        self.assertEqual(len(recorder2.get_messages()), 2)
+        self.assertEqual(len(recorder4.get_messages()), 3)
+        
 if __name__ == "__main__":
     unittest.main()
