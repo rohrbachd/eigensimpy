@@ -53,7 +53,7 @@ lin_array = LinearArray(
                         number_elements=4,
                         element_width=1e3 * 1e-6,
                         emitted_signal=signal,
-                        use_shear_wave=True
+                        use_shear_wave=False
                     )
 
 emitter_set = lin_array.create_emitters([dim_y, dim_x])

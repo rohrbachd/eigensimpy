@@ -148,13 +148,17 @@ class FieldDisplay2D(AFieldRecorder):
 
     def record(self, raw_field):
         success = False
-        if self.img is None or self.img not in self.axes.images:
-            self.img = self.axes.imshow(raw_field)
-            success = True
-        else:
-            self.img.set_data(raw_field)
-            if self.cLim is not None:
-                self.axes.set_clim(self.cLim)
-            success = True
-            self.fig.canvas.draw_idle()
+        # if self.img is None or self.img not in self.axes.images:
+        self.img = self.axes.imshow(raw_field, cmap='gray')
+        plt.show()
+        # plt.pause(0.0001)
+        success = True
+        # else:
+        #     self.img.set_data(raw_field)
+        #     if self.cLim is not None:
+        #         self.axes.set_clim(self.cLim)
+        #     success = True
+        #     self.fig.canvas.draw_idle()
+        #     # plt.show();
+        #     plt.pause(0.001)
         return success

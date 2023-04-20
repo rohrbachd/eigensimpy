@@ -63,8 +63,8 @@ class VirieuxDerivViscous2D:
         L2M, L = self.compute_lm_dim2( lamb, mu, dt, delta_space)
         Md1 = self.compute_m_dim1( mu, dt, delta_space )
 
-        X2E, X = self.compute_xe_dim2( chi, eta, delta_space)
-        E = self.compute_e_dim1( eta, delta_space )
+        X2E, X = self.compute_xe_dim2( chi, eta, dt)
+        E = self.compute_e_dim1( eta, dt )
 
         Bidtdx = Bi / dt / delta_space # deltaSpace is squared since Bi = 1/dens/dx
         Bdtdx = B / dt / delta_space # deltaSpace is squared since Bi = 1/dens/dx
@@ -103,9 +103,10 @@ class VirieuxDerivViscous2D:
             ddv1dtd2 = self.dx2_bwrd.compute(ds11d1 + ds12d2) * Bidtdx
             ddv2dtd1 = self.dx1_fwrd.compute(ds22d2 + ds12d1) * Bdtdx
 
-            recorder.record_vel1(vel1)
-            recorder.record_vel2(vel2)
-
+            if si > 481:    
+                recorder.record_vel1(vel1)
+                recorder.record_vel2(vel2)
+                    
             receiver.record_vel1(ti, vel1)
             receiver.record_vel2(ti, vel2)
 
