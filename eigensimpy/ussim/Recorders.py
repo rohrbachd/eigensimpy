@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 
 class AFieldRecorder(ABC):
 
@@ -114,51 +115,130 @@ class MessageFieldRecorder(AFieldRecorder):
 
     def get_messages(self):
         return self.messages
-    
+  
 class FieldDisplay2D(AFieldRecorder):
 
     def __init__(self, **kwargs):
-        self.fig = kwargs.get('data', None)
+        self.fig = kwargs.get('fig', None)
         self.axes = kwargs.get('axes', None)
-        self.cLim = kwargs.get('cLim', None)
+        self.clim = kwargs.get('clim', None)
         self.name = kwargs.get('name', None)
         self.img = None
+        self.current_image_data = None
+        self.ani = None
 
     def get_displayed_data(self):
-    
         image = self.img
         displayed_data = None
         if image is not None:
-            # displayed_data = image.norm.inverse (image.cmap( image.get_array() ) )
             displayed_data = image.get_array()
-            
         return displayed_data
-    
+
     def initialize(self, field):
         success = False
-        
+
         if self.fig is None or not plt.fignum_exists(self.fig.number):
             self.fig = plt.figure()
         if self.axes is None or not self.axes.figure == self.fig:
             self.axes = self.fig.gca()
 
-        self.img = self.axes.imshow(field)
+        self.img = self.axes.imshow(field, cmap='gray')
+        colorbar = self.fig.colorbar(self.img)
+        # to run GUI event loop
+        plt.ion()
+
+        self.ani = FuncAnimation(self.fig, self.plot_image, interval=100, blit=True)
+        # plt.show()
+        
         success = True
         return success
 
     def record(self, raw_field):
         success = False
-        # if self.img is None or self.img not in self.axes.images:
-        self.img = self.axes.imshow(raw_field, cmap='gray')
-        plt.show()
-        # plt.pause(0.0001)
+        self.current_image_data = raw_field
         success = True
-        # else:
-        #     self.img.set_data(raw_field)
-        #     if self.cLim is not None:
-        #         self.axes.set_clim(self.cLim)
-        #     success = True
+        # self.img = self.axes.imshow(self.current_image_data, cmap='gray')
+        # self.fig.canvas.draw()
+        # self.fig.canvas.flush_events()
+        
+        # WORKING
+        # if self.current_image_data is not None:
+        #     self.img.set_data(self.current_image_data)
+        #     if self.clim is not None:
+        #         self.img.set_clim(self.clim)
         #     self.fig.canvas.draw_idle()
-        #     # plt.show();
-        #     plt.pause(0.001)
+        #     # self.fig.canvas.draw()
+        #     self.fig.canvas.flush_events()
+            
+        #plt.pause(0.001);
         return success
+
+    def plot_image(self, _):
+        #print('plotting Image')
+        # if self.current_image_data is not None:
+        #     self.img = self.axes.imshow(self.current_image_data, cmap='gray')
+        #     # plt.show()
+        #     #plt.pause(0.001)
+            
+        #     # drawing updated values
+        #     self.fig.canvas.draw()
+    
+        #     # This will run the GUI event
+        #     # loop until all UI events
+        #     # currently waiting have been processed
+        #     self.fig.canvas.flush_events()
+        
+        if self.current_image_data is not None:
+            self.img.set_data(self.current_image_data)
+            if self.clim is not None:
+                self.img.set_clim(self.clim)
+            self.fig.canvas.draw_idle()
+            self.fig.canvas.flush_events()
+        return [self.img]
+# class FieldDisplay2D(AFieldRecorder):
+
+#     def __init__(self, **kwargs):
+#         self.fig = kwargs.get('data', None)
+#         self.axes = kwargs.get('axes', None)
+#         self.cLim = kwargs.get('cLim', None)
+#         self.name = kwargs.get('name', None)
+#         self.img = None
+
+#     def get_displayed_data(self):
+    
+#         image = self.img
+#         displayed_data = None
+#         if image is not None:
+#             # displayed_data = image.norm.inverse (image.cmap( image.get_array() ) )
+#             displayed_data = image.get_array()
+            
+#         return displayed_data
+    
+#     def initialize(self, field):
+#         success = False
+        
+#         if self.fig is None or not plt.fignum_exists(self.fig.number):
+#             self.fig = plt.figure()
+#         if self.axes is None or not self.axes.figure == self.fig:
+#             self.axes = self.fig.gca()
+
+#         self.img = self.axes.imshow(field)
+#         success = True
+#         return success
+
+#     def record(self, raw_field):
+#         success = False
+#         # if self.img is None or self.img not in self.axes.images:
+#         self.img = self.axes.imshow(raw_field, cmap='gray')
+#         plt.show()
+#         # plt.pause(0.0001)
+#         success = True
+#         # else:
+#         #     self.img.set_data(raw_field)
+#         #     if self.cLim is not None:
+#         #         self.axes.set_clim(self.cLim)
+#         #     success = True
+#         #     self.fig.canvas.draw_idle()
+#         #     # plt.show();
+#         #     plt.pause(0.001)
+#         return success

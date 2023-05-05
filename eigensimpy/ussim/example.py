@@ -84,7 +84,7 @@ settings.duration_unit = signal.dims[0].si_unit
 recorder1 = FieldDisplay2D(name="Vel1")
 recorder2 = FieldDisplay2D(name="Vel2")
 
-recorder1.clim = [-10e-9, 10e-9]
+recorder1.clim = [-5e-9, 5e-9]
 recorder2.clim = recorder1.clim
 
 recorder_set = RecorderSet2D( recorder_vel1=recorder1, recorder_vel2=recorder2)

@@ -1,5 +1,3 @@
-
-
 from eigensimpy.ussim.Media import IsotropicElasticMedia
 from eigensimpy.ussim.Recorders import RecorderSet2D
 from eigensimpy.ussim.Boundaries import SimplePML
@@ -9,6 +7,8 @@ from eigensimpy.simmath.MathUtil import interp2
 from eigensimpy.simmath.Derivatives import FirstOrderForward, FirstOrderBackward, MixedModelDerivative
 
 import numpy as np
+import threading
+import matplotlib.pyplot as plt
 
 class SimSettings:
     def __init__(self, **kwargs):
@@ -40,6 +40,29 @@ class VirieuxDerivViscous2D:
         
     def run_simulation(self):
         
+        mu = self.media.shear_modulus.data 
+        
+        
+        simulation_thread = threading.Thread(target=self._simulation_thread)
+        simulation_thread.start()
+        
+        field = AcousticField2D( field_size=mu.shape, dims=self.media.shear_modulus.dims)
+        
+        recorder = self.recorder
+        recorder.initialize(field.vel1.data)
+                
+        # Custom event loop
+        try:
+            while True:
+                plt.pause(0.1)
+        except KeyboardInterrupt:
+            pass
+
+
+        simulation_thread.join()
+        # self._simulation_thread()   
+    
+    def _simulation_thread(self):
         lamb = self.media.comp_modulus.data
         mu = self.media.shear_modulus.data 
         dens   = self.media.density.data
@@ -79,7 +102,6 @@ class VirieuxDerivViscous2D:
         stress12 = field.stress12.data
 
         recorder = self.recorder
-        recorder.initialize(vel1)
         
         receiver = self.receiver
     

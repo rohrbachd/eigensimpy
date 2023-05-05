@@ -1,0 +1,46 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+import threading
+import time
+
+# Global variable for storing the latest image data
+latest_data = None
+
+def expensive_simulation():
+    global latest_data
+    size = 100
+
+    while True:
+        # Simulate expensive computation
+        data = np.random.random((size, size))
+        #time.sleep(0.01)  # Replace this with your actual computation
+
+        # Update the latest data
+        latest_data = data
+
+def plot_data():
+    global latest_data
+
+    fig, ax = plt.subplots()
+    im = ax.imshow(np.zeros((100, 100)), cmap='viridis', vmin=0, vmax=1)
+    plt.colorbar(im)
+
+    def update(frame):
+        if latest_data is not None:
+            im.set_array(latest_data)
+        return [im]
+
+    ani = FuncAnimation(fig, update, blit=True, interval=50)
+    # plt.show()
+
+if __name__ == '__main__':
+    simulation_thread = threading.Thread(target=expensive_simulation)
+    plot_thread = threading.Thread(target=plot_data)
+
+    simulation_thread.start()
+    plot_thread.start()
+    # plot_data();
+    
+    simulation_thread.join()
+    plot_thread.join()
