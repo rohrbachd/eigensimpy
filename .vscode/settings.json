@@ -15,6 +15,22 @@
         "activityBar.inactiveForeground": "#cccccc",
         "activityBar.border": "#333333",
     },
+    "editor.tokenColorCustomizations": {
+        "textMateRules": [
+            {
+                "scope": "meta.function-call.generic.python",
+                "settings": {
+                    "fontStyle": "bold"
+                }
+            },
+            {
+                "scope": "variable.language.special.self.python",
+                "settings": {
+                    "foreground": "#FF4500"
+                }
+            }
+        ]
+    },
     "editor.fontSize": 14,
     "window.zoomLevel": 0.3,
 }
