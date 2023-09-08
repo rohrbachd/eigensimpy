@@ -377,7 +377,11 @@ class Receiver:
     The Receiver class represents a receiver that can consist of several elements.
     The recorded signals at each element will be summed.
     
-    A Receiver can be initialized using a position and signal argument.
+    A Receiver can be initialized using a position and signal argument. 
+    
+    The Position argument is a numpy array of shape (n, 3) where n is the number of elements.
+    The Signal argument is a Signal object that has a single signal in the first dimension.
+    
     """
     
     def __init__(self, **kwargs):
@@ -408,16 +412,26 @@ class Receiver:
         self.update_num_pos()
 
     def update_num_pos(self) -> None:
-        self.num_pos = self.position.shape[1]
+        self.num_pos = self.position.shape[0]
 
     def record_signal(self, time: float, field: np.ndarray) -> None:
-
+        """
+        will record the signal at the position of the receiver in the field.
+        
+        The recording will iterate over all posotion and will sum the field values 
+        at the position of the receiver. The summed value will be added to the signal
+        at the given time.
+        
+        :param time: the time at which the signal is recorded,
+        :param field: the field in which the signal is recorded. 
+        """
+        
         value = 0;
         shapeField = field.shape
         nDims = len(shapeField)
         
         for i in range(self.num_pos):
-            pos = tuple(self.position[:, i].astype(int))
+            pos = tuple(self.position[i, :].astype(int))
             value = value + field[ pos[0:nDims] ]
             
         self.signal.set_value_at( value, time, scip_out_of_bounds=True)   
