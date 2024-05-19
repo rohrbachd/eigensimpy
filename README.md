@@ -3,8 +3,10 @@
 - [Eigensimpy](#eigensimpy)
   - [Introduction](#introduction)
   - [Get Started](#get-started)
-  - [References](#references)
+  - [Features](#features)
+  - [Related Works](#related-works)
   - [Future Work](#future-work)
+  - [References](#references)
 
 
 ## Introduction
@@ -25,10 +27,15 @@ Two figures will appear which will show a plane wave propagating from the top to
 
 The two figures show the particle velocity at a given time. Figure 1 shows the velocity change in the y-direction (vertical), and Figure 2 shows the velocity in the x-direction (horizontal).
 
-## Related Works
-There are several other packages in various languages (e.g., MATLAB, C++). The work of Eigensimpy was mostly inspired by the work of Bossy and Grimal [1], which led to [Sim Sonic](http://www.simsonic.fr/), a finite difference time domain solver in C combined with a simple MATLAB toolbox. Another inspiration came from [k-Wave](http://www.k-wave.org/), a MATLAB toolbox for simulating time-resolved ultrasound propagation similar to Eigensimpy. However, k-Wave is pseudospectral based instead of finite difference time domain. The toolbox was developed by Treebz and Cox [2].
-The theory was established by Virieux [3] in 1986 and is based on a staggered grid solution. Some more details can also be found in the [Dissertation by Dr. Daniel Rohrbach](docs/rohrbach.pdf).
+## Features
+The simulation framework supports Perfectly matched layers and heterogenous anisotropic materials. Each pixel in the grid can be defined as an emitter or receiver.  
 
+## Related Works
+There are several other packages in various languages (e.g., MATLAB, C++). The work of Eigensimpy was mostly inspired by the work of Bossy and Grimal[1], which led to [Sim Sonic](http://www.simsonic.fr/), a finite difference time domain solver in C combined with a simple MATLAB toolbox. Another inspiration came from [k-Wave](http://www.k-wave.org/), a MATLAB toolbox for simulating time-resolved ultrasound propagation similar to Eigensimpy. However, k-Wave is pseudospectral based instead of finite difference time domain. The toolbox was developed by Treeby and Cox[2].
+
+The theory was established by Virieux[3] in 1986 and is based on a staggered grid solution. Some of the solvers were directly modeled after that paper and are therefore called with the same name alias (e.g., 'VirieuxDerivViscous2D').
+
+More details can also be found in the [Dissertation by Dr. Daniel Rohrbach](docs/rohrbach.pdf).
 
 
 ## Future Work
