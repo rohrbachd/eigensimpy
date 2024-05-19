@@ -15,7 +15,7 @@ This package is a Python implementation of a finite difference time domain simul
 At the current stage, this is not meant to provide a full library for simulations but rather demonstrate the principles and a first implementation in Python. 
 
 ## Get Started
-The simplest way to get started is to run the script in:
+The simplest way to get started is to run the script in ![example.py](/eigensimpy/ussim/example.py)
 
 ```
 ...\eigensimpy\eigensimpy\ussim\example.py
@@ -44,7 +44,9 @@ Future versions should include a C++ solver with support for GPU processing to a
 ## References
 [1] Bossy E, Grimal Q. Numerical Methods for Ultrasonic Bone Characterization, Bone Quantitative 
 Ultrasound. In: Laugier P, Haïat G, ed. Springer Netherlands, 2011. pp. 181-228.  
+
 [2]: Treeby BE, Cox BT. k-Wave: MATLAB toolbox for the simulation and reconstruction of 
-photoacoustic wave fields. Journal of biomedical optics 2010a;15:021314. 
+photoacoustic wave fields. Journal of biomedical optics 2010a;15:021314.
+
 [3]: Virieux J. P-SV wave propagation in heterogeneous media: Velocity-stress finite-difference method. *Geophysics* 1986;51.
 
